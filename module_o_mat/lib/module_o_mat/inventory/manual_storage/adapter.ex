@@ -17,4 +17,7 @@ defmodule ModuleOMat.Inventory.ManualStorage.Adapter do
   @callback store!(key(), Path.t()) :: :ok
   @callback delete(key()) :: :ok
   @callback serve(Plug.Conn.t(), key(), serve_opts()) :: Plug.Conn.t()
+  @callback copy_out!(key(), Path.t()) :: :ok
+  @callback replace_all!(Path.t()) :: :ok
+  @callback exists?(key()) :: boolean()
 end

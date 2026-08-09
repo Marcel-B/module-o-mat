@@ -34,6 +34,9 @@ module_o_mat-*.tar
 # Ignore user-uploaded PDF manuals.
 /priv/static/uploads/
 
+# Ignore inventory ZIP backups created via mix inventory.export.
+/priv/backups/
+
 # Ignore digested assets cache.
 /priv/static/cache_manifest.json
 

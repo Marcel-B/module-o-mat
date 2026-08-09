@@ -48,6 +48,54 @@ defmodule ModuleOMat.Inventory.ManualStorage.LocalDisk do
     end
   end
 
+  @impl true
+  def copy_out!(key, dest_path) when is_binary(key) and is_binary(dest_path) do
+    source = path_for(key)
+
+    if File.exists?(source) do
+      File.mkdir_p!(Path.dirname(dest_path))
+      File.cp!(source, dest_path)
+      :ok
+    else
+      raise File.Error, reason: :enoent, action: "copy file", path: source
+    end
+  end
+
+  @impl true
+  def replace_all!(source_dir) when is_binary(source_dir) do
+    unless File.dir?(source_dir) do
+      raise ArgumentError, "Quellverzeichnis existiert nicht: #{source_dir}"
+    end
+
+    dest = upload_dir()
+    File.mkdir_p!(dest)
+
+    dest
+    |> File.ls!()
+    |> Enum.each(fn name ->
+      path = Path.join(dest, name)
+      File.rm_rf!(path)
+    end)
+
+    source_dir
+    |> File.ls!()
+    |> Enum.each(fn name ->
+      from = Path.join(source_dir, name)
+      to = Path.join(dest, name)
+
+      if File.regular?(from) do
+        File.cp!(from, to)
+      end
+    end)
+
+    :ok
+  end
+
+  @impl true
+  def exists?(key) when is_binary(key) do
+    File.exists?(path_for(key))
+  end
+
   @doc """
   Absoluter Pfad zur Datei mit dem gegebenen Key.
   """
