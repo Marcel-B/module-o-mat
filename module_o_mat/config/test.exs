@@ -5,6 +5,9 @@ config :module_o_mat, ModuleOMat.Repo,
   pool: Ecto.Adapters.SQL.Sandbox,
   pool_size: 5
 
+config :module_o_mat,
+  manual_uploads_dir: Path.expand("../tmp/manual_uploads_test", __DIR__)
+
 # We don't run a server during test. If one is required,
 # you can enable the server option below.
 config :module_o_mat, ModuleOMatWeb.Endpoint,

@@ -10,6 +10,7 @@ defmodule ModuleOMat.Inventory do
 
   alias ModuleOMat.Repo
   alias ModuleOMat.Inventory.EurorackModule
+  alias ModuleOMat.Inventory.ManualStorage
   alias ModuleOMat.Inventory.ModuleType
 
   @doc """
@@ -180,21 +181,88 @@ defmodule ModuleOMat.Inventory do
   end
 
   @doc """
-  Loescht ein Eurorack-Modul unwiderruflich aus der Datenbank.
+  Loescht ein Eurorack-Modul unwiderruflich aus der Datenbank und entfernt
+  eine ggf. vorhandene PDF-Anleitung vom Storage.
   """
   def delete_eurorack_module(%EurorackModule{} = eurorack_module) do
-    Repo.delete(eurorack_module)
+    case Repo.delete(eurorack_module) do
+      {:ok, deleted} ->
+        ManualStorage.delete(deleted.manual_pdf_key)
+        {:ok, deleted}
+
+      {:error, _} = error ->
+        error
+    end
   end
 
   @doc """
   Markiert ein Eurorack-Modul als geloescht (Soft-Delete), ohne den
   Datensatz aus der Datenbank zu entfernen. Ein so markiertes Modul taucht
-  nicht mehr in `list_eurorack_modules/0` auf.
+  nicht mehr in `list_eurorack_modules/0` auf. Eine vorhandene PDF-Anleitung
+  bleibt erhalten.
   """
   def soft_delete_eurorack_module(%EurorackModule{} = eurorack_module) do
     eurorack_module
     |> Ecto.Changeset.change(deleted_at: DateTime.utc_now(:second))
     |> Repo.update()
+  end
+
+  @doc """
+  Speichert eine PDF-Anleitung fuer das Modul und aktualisiert die
+  zugehoerigen Metadaten. Eine bisherige Anleitung wird nach erfolgreichem
+  Speichern ersetzt und vom Storage entfernt.
+  """
+  def attach_manual(%EurorackModule{} = eurorack_module, %{
+        tmp_path: tmp_path,
+        filename: filename,
+        content_type: content_type,
+        size: size
+      })
+      when is_binary(tmp_path) and is_binary(filename) do
+    new_key = ManualStorage.new_key()
+    old_key = eurorack_module.manual_pdf_key
+
+    ManualStorage.store!(new_key, tmp_path)
+
+    attrs = %{
+      manual_pdf_key: new_key,
+      manual_pdf_filename: filename,
+      manual_pdf_content_type: content_type || "application/pdf",
+      manual_pdf_size_bytes: size
+    }
+
+    case eurorack_module |> EurorackModule.manual_changeset(attrs) |> Repo.update() do
+      {:ok, updated} ->
+        if old_key && old_key != new_key, do: ManualStorage.delete(old_key)
+        {:ok, updated}
+
+      {:error, changeset} ->
+        ManualStorage.delete(new_key)
+        {:error, changeset}
+    end
+  end
+
+  @doc """
+  Entfernt die PDF-Anleitung eines Moduls aus der Datenbank und vom Storage.
+  """
+  def remove_manual(%EurorackModule{} = eurorack_module) do
+    key = eurorack_module.manual_pdf_key
+
+    attrs = %{
+      manual_pdf_key: nil,
+      manual_pdf_filename: nil,
+      manual_pdf_content_type: nil,
+      manual_pdf_size_bytes: nil
+    }
+
+    case eurorack_module |> EurorackModule.manual_changeset(attrs) |> Repo.update() do
+      {:ok, updated} ->
+        ManualStorage.delete(key)
+        {:ok, updated}
+
+      {:error, _} = error ->
+        error
+    end
   end
 
   @doc """
