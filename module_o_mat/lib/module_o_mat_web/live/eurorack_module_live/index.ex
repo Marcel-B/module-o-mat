@@ -646,21 +646,33 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
       )
 
     ~H"""
-    <a
-      :if={@primary && @watch_url}
-      href={@watch_url}
-      id={"open-youtube-#{@eurorack_module.id}"}
-      class="btn btn-ghost btn-xs relative"
-      title="YouTube-Video oeffnen"
-      aria-label="YouTube-Video oeffnen"
-      target="_blank"
-      rel="noopener noreferrer"
-      phx-hook=".YoutubePreview"
-      phx-update="ignore"
-      data-embed-url={@embed_url}
-    >
-      <.icon name="hero-play" />
-    </a>
+    <%= if @primary && @watch_url do %>
+      <a
+        href={@watch_url}
+        id={"open-youtube-#{@eurorack_module.id}"}
+        class="btn btn-ghost btn-xs relative"
+        title="YouTube-Video oeffnen"
+        aria-label="YouTube-Video oeffnen"
+        target="_blank"
+        rel="noopener noreferrer"
+        phx-hook=".YoutubePreview"
+        phx-update="ignore"
+        data-embed-url={@embed_url}
+      >
+        <.icon name="hero-play" />
+      </a>
+    <% else %>
+      <button
+        type="button"
+        id={"open-youtube-#{@eurorack_module.id}"}
+        class="btn btn-ghost btn-xs btn-disabled"
+        title="Kein YouTube-Video"
+        aria-label="Kein YouTube-Video"
+        disabled
+      >
+        <.icon name="hero-play" />
+      </button>
+    <% end %>
     """
   end
 

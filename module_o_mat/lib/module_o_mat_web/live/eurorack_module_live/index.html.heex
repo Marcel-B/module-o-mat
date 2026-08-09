@@ -104,30 +104,41 @@
     Keine Module gefunden.
   </p>
 
-  <div :for={group <- grouped_eurorack_modules(@eurorack_modules)} class="mb-8">
-    <h2 class="text-base font-semibold mb-2">
-      {hd(group).type}
-      <span class="text-base-content/50 font-normal">({length(group)})</span>
-    </h2>
-
-    <table class="table table-zebra" id={"eurorack-modules-#{hd(group).type}"}>
-      <thead>
-        <tr>
-          <th>Hersteller</th>
-          <th>Modul</th>
-          <th>HP</th>
-          <th class="text-right">Aktionen</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr :for={eurorack_module <- group} id={"eurorack-module-#{eurorack_module.id}"}>
-          <td>{eurorack_module.manufacturer}</td>
-          <td>{eurorack_module.name}</td>
-          <td>{eurorack_module.hp}</td>
-          <td>
-            <div class="flex gap-2 justify-end">
+  <table
+    :if={@eurorack_modules != []}
+    class="table w-full table-fixed"
+    id="eurorack-modules"
+  >
+    <thead>
+      <tr>
+        <th>Modul</th>
+        <th class="w-14 whitespace-nowrap">HP</th>
+        <th class="w-60 text-right whitespace-nowrap">Aktionen</th>
+      </tr>
+    </thead>
+    <tbody
+      :for={group <- grouped_eurorack_modules(@eurorack_modules)}
+      id={"eurorack-modules-#{hd(group).type}"}
+    >
+      <tr class="border-0 hover:bg-primary/20">
+        <td colspan="3" class="bg-primary/20 font-semibold py-2">
+          {hd(group).type}
+          <span class="text-base-content/60 font-normal">({length(group)})</span>
+        </td>
+      </tr>
+      <tr
+        :for={eurorack_module <- group}
+        id={"eurorack-module-#{eurorack_module.id}"}
+        class="hover:bg-base-200"
+      >
+        <td class="truncate">
+          {eurorack_module.manufacturer} - {eurorack_module.name}
+        </td>
+        <td class="w-14 whitespace-nowrap">{eurorack_module.hp}</td>
+        <td class="w-60 whitespace-nowrap">
+          <div class="flex shrink-0 gap-1 justify-end">
+            <%= if eurorack_module.manual_pdf_key do %>
               <.link
-                :if={eurorack_module.manual_pdf_key}
                 href={~p"/eurorack_modules/#{eurorack_module.id}/manual"}
                 id={"open-manual-pdf-#{eurorack_module.id}"}
                 class="btn btn-ghost btn-xs"
@@ -138,42 +149,53 @@
               >
                 <.icon name="hero-document-text" />
               </.link>
-              <.youtube_play_button eurorack_module={eurorack_module} />
-              <.link
-                patch={~p"/eurorack_modules/#{eurorack_module.id}"}
-                id={"show-eurorack-module-#{eurorack_module.id}"}
-                class="btn btn-ghost btn-xs"
-                title="Anzeigen"
-                aria-label="Anzeigen"
-              >
-                <.icon name="hero-eye" />
-              </.link>
-              <.link
-                patch={~p"/eurorack_modules/#{eurorack_module.id}/edit"}
-                id={"edit-eurorack-module-#{eurorack_module.id}"}
-                class="btn btn-ghost btn-xs"
-                title="Bearbeiten"
-                aria-label="Bearbeiten"
-              >
-                <.icon name="hero-pencil-square" />
-              </.link>
+            <% else %>
               <button
                 type="button"
-                id={"delete-eurorack-module-#{eurorack_module.id}"}
-                class="btn btn-ghost btn-xs text-error"
-                title="Loeschen"
-                aria-label="Loeschen"
-                phx-click="delete"
-                phx-value-id={eurorack_module.id}
+                id={"open-manual-pdf-#{eurorack_module.id}"}
+                class="btn btn-ghost btn-xs btn-disabled"
+                title="Keine PDF-Anleitung"
+                aria-label="Keine PDF-Anleitung"
+                disabled
               >
-                <.icon name="hero-trash" />
+                <.icon name="hero-document-text" />
               </button>
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+            <% end %>
+            <.youtube_play_button eurorack_module={eurorack_module} />
+            <.link
+              patch={~p"/eurorack_modules/#{eurorack_module.id}"}
+              id={"show-eurorack-module-#{eurorack_module.id}"}
+              class="btn btn-ghost btn-xs"
+              title="Anzeigen"
+              aria-label="Anzeigen"
+            >
+              <.icon name="hero-eye" />
+            </.link>
+            <.link
+              patch={~p"/eurorack_modules/#{eurorack_module.id}/edit"}
+              id={"edit-eurorack-module-#{eurorack_module.id}"}
+              class="btn btn-ghost btn-xs"
+              title="Bearbeiten"
+              aria-label="Bearbeiten"
+            >
+              <.icon name="hero-pencil-square" />
+            </.link>
+            <button
+              type="button"
+              id={"delete-eurorack-module-#{eurorack_module.id}"}
+              class="btn btn-ghost btn-xs text-error"
+              title="Loeschen"
+              aria-label="Loeschen"
+              phx-click="delete"
+              phx-value-id={eurorack_module.id}
+            >
+              <.icon name="hero-trash" />
+            </button>
+          </div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
 
   <script :type={Phoenix.LiveView.ColocatedHook} name=".YoutubePreview">
     export default {

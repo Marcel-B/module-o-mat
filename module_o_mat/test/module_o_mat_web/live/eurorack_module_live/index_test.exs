@@ -17,19 +17,20 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
     } do
       eurorack_module_fixture(%{manufacturer: "Doepfer", name: "A-140", type: "Envelope"})
       eurorack_module_fixture(%{manufacturer: "Mutable Instruments", name: "Plaits", type: "VCO"})
-      eurorack_module_fixture(%{manufacturer: "Make Noise", name: "STO", type: "VCO"})
+      sto = eurorack_module_fixture(%{manufacturer: "Make Noise", name: "STO", type: "VCO"})
 
       {:ok, view, _html} = live(conn, ~p"/")
 
       assert has_element?(view, "#eurorack-modules-Envelope")
       assert has_element?(view, "#eurorack-modules-VCO")
+      assert has_element?(view, "#eurorack-module-#{sto.id}", "Make Noise - STO")
 
       html = render(view)
 
       {envelope_at, _} = :binary.match(html, "Envelope")
       {vco_at, _} = :binary.match(html, "VCO")
-      {make_noise_at, _} = :binary.match(html, "Make Noise")
-      {mutable_at, _} = :binary.match(html, "Mutable Instruments")
+      {make_noise_at, _} = :binary.match(html, "Make Noise - STO")
+      {mutable_at, _} = :binary.match(html, "Mutable Instruments - Plaits")
 
       assert envelope_at < vco_at, "Gruppe \"Envelope\" sollte vor \"VCO\" angezeigt werden"
 
@@ -639,7 +640,9 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
   describe "PDF-Anleitung" do
     @fixture Path.expand("../../../support/fixtures/files/sample.pdf", __DIR__)
 
-    test "zeigt den PDF-Button in der Tabelle nur bei vorhandener Anleitung", %{conn: conn} do
+    test "zeigt den PDF-Button in der Tabelle disabled ohne und aktiv mit Anleitung", %{
+      conn: conn
+    } do
       without = eurorack_module_fixture(%{name: "Ohne PDF"})
       with_manual = eurorack_module_fixture(%{name: "Mit PDF"})
 
@@ -653,8 +656,9 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
 
       {:ok, view, _html} = live(conn, ~p"/")
 
-      refute has_element?(view, "#open-manual-pdf-#{without.id}")
+      assert has_element?(view, "#open-manual-pdf-#{without.id}[disabled]")
       assert has_element?(view, "#open-manual-pdf-#{with_manual.id}")
+      refute has_element?(view, "#open-manual-pdf-#{with_manual.id}[disabled]")
     end
 
     test "laedt beim Anlegen eine PDF-Anleitung hoch", %{conn: conn} do
@@ -735,12 +739,12 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
   end
 
   describe "YouTube-Videos" do
-    test "zeigt keinen Play-Button ohne Videos", %{conn: conn} do
+    test "zeigt den Play-Button disabled ohne Videos", %{conn: conn} do
       eurorack_module = eurorack_module_fixture()
 
       {:ok, view, _html} = live(conn, ~p"/")
 
-      refute has_element?(view, "#open-youtube-#{eurorack_module.id}")
+      assert has_element?(view, "#open-youtube-#{eurorack_module.id}[disabled]")
     end
 
     test "zeigt einen Play-Button mit dem ersten Video als Ziel", %{conn: conn} do
