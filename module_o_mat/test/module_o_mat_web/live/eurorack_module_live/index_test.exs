@@ -734,6 +734,115 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
     end
   end
 
+  describe "YouTube-Videos" do
+    test "zeigt keinen Play-Button ohne Videos", %{conn: conn} do
+      eurorack_module = eurorack_module_fixture()
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      refute has_element?(view, "#open-youtube-#{eurorack_module.id}")
+    end
+
+    test "zeigt einen Play-Button mit dem ersten Video als Ziel", %{conn: conn} do
+      eurorack_module =
+        eurorack_module_fixture(%{
+          youtube_videos: [
+            %{url: "https://www.youtube.com/watch?v=first111111"},
+            %{url: "https://www.youtube.com/watch?v=second22222"}
+          ]
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      assert has_element?(
+               view,
+               "#open-youtube-#{eurorack_module.id}[href='https://www.youtube.com/watch?v=first111111']"
+             )
+
+      assert has_element?(
+               view,
+               "#open-youtube-#{eurorack_module.id}[data-embed-url*='first111111']"
+             )
+    end
+
+    test "erlaubt das Hinzufuegen, Umsortieren und Speichern von YouTube-Links", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/eurorack_modules/new")
+
+      view
+      |> element("#add-youtube-video-button")
+      |> render_click()
+
+      view
+      |> element("#add-youtube-video-button")
+      |> render_click()
+
+      assert has_element?(view, "#youtube-video-row-0")
+      assert has_element?(view, "#youtube-video-row-1")
+
+      view
+      |> form("#eurorack-module-form",
+        eurorack_module: %{
+          "manufacturer" => "Make Noise",
+          "name" => "Maths",
+          "hp" => "20",
+          "type" => "Envelope",
+          "youtube_videos" => %{
+            "0" => %{"url" => "https://www.youtube.com/watch?v=first111111"},
+            "1" => %{"url" => "https://www.youtube.com/watch?v=second22222"}
+          }
+        }
+      )
+      |> render_change()
+
+      view
+      |> element("#move-youtube-video-up-1")
+      |> render_click()
+
+      view
+      |> form("#eurorack-module-form",
+        eurorack_module: %{
+          "manufacturer" => "Make Noise",
+          "name" => "Maths",
+          "hp" => "20",
+          "type" => "Envelope",
+          "youtube_videos" => %{
+            "0" => %{"url" => "https://www.youtube.com/watch?v=second22222"},
+            "1" => %{"url" => "https://www.youtube.com/watch?v=first111111"}
+          }
+        }
+      )
+      |> render_submit()
+
+      assert_patch(view, ~p"/")
+
+      assert [eurorack_module] = Inventory.list_eurorack_modules()
+
+      assert Enum.map(eurorack_module.youtube_videos, & &1.url) == [
+               "https://www.youtube.com/watch?v=second22222",
+               "https://www.youtube.com/watch?v=first111111"
+             ]
+
+      assert has_element?(
+               view,
+               "#open-youtube-#{eurorack_module.id}[href='https://www.youtube.com/watch?v=second22222']"
+             )
+    end
+
+    test "zeigt YouTube-Links im Anzeige-Dialog", %{conn: conn} do
+      eurorack_module =
+        eurorack_module_fixture(%{
+          youtube_videos: [%{url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ"}]
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/eurorack_modules/#{eurorack_module.id}")
+
+      assert has_element?(
+               view,
+               "#youtube-video-link-0[href='https://www.youtube.com/watch?v=dQw4w9WgXcQ']"
+             )
+    end
+  end
+
   defp module_type_id(name) do
     Inventory.list_module_type_records()
     |> Enum.find(&(&1.name == name))

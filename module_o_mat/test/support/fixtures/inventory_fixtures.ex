@@ -30,12 +30,22 @@ defmodule ModuleOMat.InventoryFixtures do
   und liefert den erzeugten Datensatz zurueck.
   """
   def eurorack_module_fixture(attrs \\ %{}) do
-    {:ok, eurorack_module} =
+    {youtube_videos, attrs} = Map.pop(attrs, :youtube_videos, [])
+
+    attrs =
       attrs
       |> valid_eurorack_module_attrs()
-      |> Inventory.create_eurorack_module()
+      |> maybe_put_youtube_videos(youtube_videos)
+
+    {:ok, eurorack_module} = Inventory.create_eurorack_module(attrs)
 
     eurorack_module
+  end
+
+  defp maybe_put_youtube_videos(attrs, []), do: attrs
+
+  defp maybe_put_youtube_videos(attrs, youtube_videos) when is_list(youtube_videos) do
+    Map.put(attrs, :youtube_videos, youtube_videos)
   end
 
   @doc """

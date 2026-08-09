@@ -12,6 +12,7 @@ defmodule ModuleOMat.Inventory do
   alias ModuleOMat.Inventory.EurorackModule
   alias ModuleOMat.Inventory.ManualStorage
   alias ModuleOMat.Inventory.ModuleType
+  alias ModuleOMat.Inventory.YoutubeVideo
 
   @doc """
   Name des Fallback-Typs, auf den Module zurueckfallen, wenn ihr bisheriger
@@ -53,6 +54,7 @@ defmodule ModuleOMat.Inventory do
     |> maybe_filter_min_hp(min_hp)
     |> maybe_filter_max_hp(max_hp)
     |> order_by([m], asc: m.type, asc: m.manufacturer)
+    |> preload(youtube_videos: ^from(v in YoutubeVideo, order_by: [asc: v.position]))
     |> Repo.all()
   end
 
@@ -224,19 +226,36 @@ defmodule ModuleOMat.Inventory do
   end
 
   @doc """
-  Liefert ein einzelnes Eurorack-Modul anhand der ID.
+  Liefert ein einzelnes Eurorack-Modul anhand der ID, inklusive YouTube-Videos
+  (sortiert nach `position`).
 
   Wirft `Ecto.NoResultsError`, falls kein Modul mit der ID existiert.
   """
   def get_eurorack_module!(id) do
-    Repo.get!(EurorackModule, id)
+    EurorackModule
+    |> preload(youtube_videos: ^from(v in YoutubeVideo, order_by: [asc: v.position]))
+    |> Repo.get!(id)
+  end
+
+  @doc """
+  Liefert das erste YouTube-Video eines Moduls (niedrigste `position`) oder
+  `nil`, wenn keines hinterlegt ist.
+  """
+  def primary_youtube_video(%EurorackModule{youtube_videos: videos}) when is_list(videos) do
+    Enum.min_by(videos, & &1.position, fn -> nil end)
+  end
+
+  def primary_youtube_video(%EurorackModule{} = eurorack_module) do
+    eurorack_module
+    |> Repo.preload(youtube_videos: from(v in YoutubeVideo, order_by: [asc: v.position]))
+    |> primary_youtube_video()
   end
 
   @doc """
   Legt ein neues Eurorack-Modul mit den gegebenen Attributen an.
   """
   def create_eurorack_module(attrs \\ %{}) do
-    %EurorackModule{}
+    %EurorackModule{youtube_videos: []}
     |> EurorackModule.changeset(attrs)
     |> Repo.insert()
   end
@@ -246,6 +265,7 @@ defmodule ModuleOMat.Inventory do
   """
   def update_eurorack_module(%EurorackModule{} = eurorack_module, attrs) do
     eurorack_module
+    |> ensure_youtube_videos_loaded()
     |> EurorackModule.changeset(attrs)
     |> Repo.update()
   end
@@ -340,6 +360,18 @@ defmodule ModuleOMat.Inventory do
   nachzuverfolgen, z.B. fuer eine spaetere Formular-Anbindung.
   """
   def change_eurorack_module(%EurorackModule{} = eurorack_module, attrs \\ %{}) do
-    EurorackModule.changeset(eurorack_module, attrs)
+    eurorack_module
+    |> ensure_youtube_videos_loaded()
+    |> EurorackModule.changeset(attrs)
   end
+
+  defp ensure_youtube_videos_loaded(
+         %EurorackModule{youtube_videos: %Ecto.Association.NotLoaded{}} = eurorack_module
+       ) do
+    Repo.preload(eurorack_module,
+      youtube_videos: from(v in YoutubeVideo, order_by: [asc: v.position])
+    )
+  end
+
+  defp ensure_youtube_videos_loaded(%EurorackModule{} = eurorack_module), do: eurorack_module
 end
