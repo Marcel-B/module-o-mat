@@ -29,7 +29,8 @@ defmodule ModuleOMat.Inventory do
   Akzeptiert einen Suchstring oder Keyword-Optionen:
 
     * `:q` – case-insensitive Teilstring in `manufacturer` oder `name`
-    * `:types` – Liste von Typnamen; Module muessen einen davon haben
+    * `:types` – Liste von Typnamen; Module muessen einen davon als Haupttyp
+      oder Subtyp haben
     * `:min_hp` / `:max_hp` – HP-Grenzen (nur positive Ganzzahlen)
 
   Alle gesetzten Kriterien werden per AND verknuepft; Typen untereinander
@@ -75,7 +76,18 @@ defmodule ModuleOMat.Inventory do
   defp maybe_filter_types(query, []), do: query
 
   defp maybe_filter_types(query, types) do
-    where(query, [m], m.type in ^types)
+    types_json = Jason.encode!(types)
+
+    where(
+      query,
+      [m],
+      m.type in ^types or
+        fragment(
+          "exists (select 1 from json_each(?) where value in (select value from json_each(?)))",
+          m.subtypes,
+          ^types_json
+        )
+    )
   end
 
   defp maybe_filter_min_hp(query, nil), do: query
@@ -136,19 +148,20 @@ defmodule ModuleOMat.Inventory do
   end
 
   @doc """
-  Liefert alle Typwerte, die bereits an einem Eurorack-Modul verwendet
-  werden (ohne Duplikate). Damit bleiben auch Typen im Auswahlfeld
-  sichtbar, die aus irgendeinem Grund (noch) nicht ueber
+  Liefert alle Typwerte, die bereits an einem Eurorack-Modul als Haupttyp
+  oder Subtyp verwendet werden (ohne Duplikate). Damit bleiben auch Typen
+  im Auswahlfeld sichtbar, die aus irgendeinem Grund (noch) nicht ueber
   `create_module_type/1` definiert wurden.
   """
   def list_used_types do
     EurorackModule
     |> where([m], is_nil(m.deleted_at))
-    |> select([m], m.type)
-    |> distinct(true)
-    |> order_by([m], asc: m.type)
+    |> select([m], {m.type, m.subtypes})
     |> Repo.all()
-    |> Enum.reject(&is_nil/1)
+    |> Enum.flat_map(fn {type, subtypes} -> [type | List.wrap(subtypes)] end)
+    |> Enum.reject(&(&1 in [nil, ""]))
+    |> Enum.uniq()
+    |> Enum.sort()
   end
 
   @doc """
@@ -170,8 +183,9 @@ defmodule ModuleOMat.Inventory do
   end
 
   @doc """
-  Benennt einen Modultyp um. Module, die den bisherigen Namen referenzieren,
-  werden automatisch auf den neuen Namen umgestellt.
+  Benennt einen Modultyp um. Module, die den bisherigen Namen als Haupttyp
+  oder Subtyp referenzieren, werden automatisch auf den neuen Namen
+  umgestellt.
 
   Der Fallback-Typ (siehe `fallback_type_name/0`) kann nicht umbenannt
   werden; in diesem Fall wird `{:error, :fallback_type}` geliefert.
@@ -190,6 +204,10 @@ defmodule ModuleOMat.Inventory do
             EurorackModule
             |> where([m], m.type == ^old_name)
             |> Repo.update_all(set: [type: updated.name])
+
+            old_name
+            |> modules_with_subtype()
+            |> replace_subtype_name(old_name, updated.name)
           end
 
           updated
@@ -201,9 +219,9 @@ defmodule ModuleOMat.Inventory do
   end
 
   @doc """
-  Loescht einen Modultyp. Module, die diesen Typ referenzieren, werden
-  automatisch auf den Fallback-Typ (siehe `fallback_type_name/0`)
-  umgestellt, statt verwaist zu bleiben.
+  Loescht einen Modultyp. Module, die diesen Typ als Haupttyp referenzieren,
+  werden automatisch auf den Fallback-Typ (siehe `fallback_type_name/0`)
+  umgestellt. Vorkommen als Subtyp werden aus der Subtypen-Liste entfernt.
 
   Der Fallback-Typ selbst kann nicht geloescht werden; in diesem Fall wird
   `{:error, :fallback_type}` geliefert.
@@ -218,10 +236,54 @@ defmodule ModuleOMat.Inventory do
       |> where([m], m.type == ^module_type.name)
       |> Repo.update_all(set: [type: @fallback_type_name])
 
+      module_type.name
+      |> modules_with_subtype()
+      |> remove_subtype_name(module_type.name)
+
       case Repo.delete(module_type) do
         {:ok, deleted} -> deleted
         {:error, changeset} -> Repo.rollback(changeset)
       end
+    end)
+  end
+
+  defp modules_with_subtype(name) do
+    EurorackModule
+    |> where(
+      [m],
+      fragment("exists (select 1 from json_each(?) where value = ?)", m.subtypes, ^name)
+    )
+    |> Repo.all()
+  end
+
+  defp replace_subtype_name(modules, old_name, new_name) do
+    Enum.each(modules, fn module ->
+      subtypes =
+        module.subtypes
+        |> List.wrap()
+        |> Enum.map(fn
+          ^old_name -> new_name
+          other -> other
+        end)
+        |> Enum.uniq()
+        |> Enum.reject(&(&1 == module.type))
+
+      module
+      |> Ecto.Changeset.change(subtypes: subtypes)
+      |> Repo.update!()
+    end)
+  end
+
+  defp remove_subtype_name(modules, name) do
+    Enum.each(modules, fn module ->
+      subtypes =
+        module.subtypes
+        |> List.wrap()
+        |> Enum.reject(&(&1 == name))
+
+      module
+      |> Ecto.Changeset.change(subtypes: subtypes)
+      |> Repo.update!()
     end)
   end
 

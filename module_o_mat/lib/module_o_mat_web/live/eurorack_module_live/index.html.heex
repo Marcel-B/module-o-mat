@@ -272,20 +272,26 @@
   <.modal
     :if={@live_action in [:new, :edit, :show]}
     id="eurorack-module-modal"
-    box_class="sm:max-w-2xl"
+    box_class="sm:max-w-2xl max-h-[calc(100vh-5em)] flex flex-col overflow-hidden"
   >
     <:title>{@page_title}</:title>
 
-    <div :if={@live_action == :show} id="eurorack-module-show">
-      <.eurorack_module_fields
-        form={@form}
-        disabled={true}
-        manufacturers={@manufacturers}
-        types={@types}
-        eurorack_module={@eurorack_module}
-      />
+    <div
+      :if={@live_action == :show}
+      id="eurorack-module-show"
+      class="flex min-h-0 flex-1 flex-col"
+    >
+      <div class="min-h-0 flex-1 overflow-y-auto">
+        <.eurorack_module_fields
+          form={@form}
+          disabled={true}
+          manufacturers={@manufacturers}
+          types={@types}
+          eurorack_module={@eurorack_module}
+        />
+      </div>
 
-      <div class="flex gap-2 justify-end mt-4">
+      <div class="flex shrink-0 gap-2 justify-end pt-4">
         <.link patch={~p"/"} id="close-eurorack-module-button" class="btn">
           Schliessen
         </.link>
@@ -296,19 +302,22 @@
       :if={@live_action in [:new, :edit]}
       for={@form}
       id="eurorack-module-form"
+      class="flex min-h-0 flex-1 flex-col"
       phx-change="validate"
       phx-submit="save"
     >
-      <.eurorack_module_fields
-        form={@form}
-        disabled={false}
-        manufacturers={@manufacturers}
-        types={@types}
-        uploads={@uploads}
-        eurorack_module={@eurorack_module}
-      />
+      <div class="min-h-0 flex-1 overflow-y-auto">
+        <.eurorack_module_fields
+          form={@form}
+          disabled={false}
+          manufacturers={@manufacturers}
+          types={@types}
+          uploads={@uploads}
+          eurorack_module={@eurorack_module}
+        />
+      </div>
 
-      <div class="flex gap-2 justify-end mt-4">
+      <div class="flex shrink-0 gap-2 justify-end pt-4">
         <.link patch={~p"/"} id="cancel-eurorack-module-button" class="btn">
           Abbrechen
         </.link>
