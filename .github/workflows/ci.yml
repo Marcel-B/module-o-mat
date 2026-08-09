@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: Build & Test
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: module_o_mat
+    env:
+      MIX_ENV: test
+
+    steps:
+      - name: Code auschecken
+        uses: actions/checkout@v4
+
+      - name: Erlang/Elixir einrichten
+        id: beam
+        uses: erlef/setup-beam@v1
+        with:
+          otp-version: "29"
+          elixir-version: "1.20"
+
+      - name: Dependency-Cache wiederherstellen
+        uses: actions/cache@v4
+        with:
+          path: |
+            module_o_mat/deps
+            module_o_mat/_build
+          key: ${{ runner.os }}-mix-${{ steps.beam.outputs.otp-version }}-${{ steps.beam.outputs.elixir-version }}-${{ hashFiles('module_o_mat/mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-mix-${{ steps.beam.outputs.otp-version }}-${{ steps.beam.outputs.elixir-version }}-
+
+      - name: Abhaengigkeiten installieren
+        run: mix deps.get
+
+      - name: Projekt bauen (Kompilieren, keine Warnungen erlaubt)
+        run: mix compile --warnings-as-errors
+
+      - name: Formatierung pruefen
+        run: mix format --check-formatted
+
+      - name: Tests mit Testabdeckung ausfuehren
+        id: run_tests
+        run: |
+          set -o pipefail
+          mix test --cover --trace 2>&1 | tee test_output.log
+
+      - name: Uebersicht der Testergebnisse und Testabdeckung erzeugen
+        if: always()
+        run: |
+          LOG="test_output.log"
+          STATUS="${{ steps.run_tests.outcome }}"
+
+          {
+            if [ "$STATUS" = "success" ]; then
+              echo "## ✅ Tests erfolgreich"
+            else
+              echo "## ❌ Tests fehlgeschlagen"
+            fi
+            echo
+            echo "### Testergebnisse"
+            echo
+            echo '```text'
+            awk '/^Finished in/,/^Result:/' "$LOG"
+            echo '```'
+            echo
+            echo "### Testabdeckung"
+            echo
+            echo '```text'
+            awk '/^\| Percentage/,/Total/' "$LOG"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: HTML-Coverage-Report als Artefakt hochladen
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: module_o_mat/cover
+          retention-days: 14
