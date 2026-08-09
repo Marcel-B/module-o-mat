@@ -3,6 +3,7 @@
 Eine Elixir/Phoenix-Anwendung zur Erfassung von Eurorack-Modulen (Hersteller,
 Name, HP-Breite, Typ, Strombedarf, u.v.m.).
 
+Page [https://marcel-b.github.io/module-o-mat/](https://marcel-b.github.io/module-o-mat/)
 ## Architektur
 
 - `ModuleOMat.Inventory.EurorackModule` – Ecto-Schema, definiert das

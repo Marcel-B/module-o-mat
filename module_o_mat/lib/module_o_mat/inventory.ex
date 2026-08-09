@@ -24,12 +24,80 @@ defmodule ModuleOMat.Inventory do
   @doc """
   Liefert alle nicht geloeschten Eurorack-Module, sortiert nach Typ und
   Hersteller.
+
+  Akzeptiert einen Suchstring oder Keyword-Optionen:
+
+    * `:q` – case-insensitive Teilstring in `manufacturer` oder `name`
+    * `:types` – Liste von Typnamen; Module muessen einen davon haben
+    * `:min_hp` / `:max_hp` – HP-Grenzen (nur positive Ganzzahlen)
+
+  Alle gesetzten Kriterien werden per AND verknuepft; Typen untereinander
+  per OR.
   """
-  def list_eurorack_modules do
+  def list_eurorack_modules(opts \\ [])
+
+  def list_eurorack_modules(query) when is_binary(query) do
+    list_eurorack_modules(q: query)
+  end
+
+  def list_eurorack_modules(opts) when is_list(opts) do
+    q = opts |> Keyword.get(:q, "") |> to_string() |> String.trim()
+    types = opts |> Keyword.get(:types, []) |> List.wrap() |> Enum.reject(&(&1 in [nil, ""]))
+    min_hp = positive_integer(Keyword.get(opts, :min_hp))
+    max_hp = positive_integer(Keyword.get(opts, :max_hp))
+
     EurorackModule
     |> where([m], is_nil(m.deleted_at))
+    |> maybe_filter_query(q)
+    |> maybe_filter_types(types)
+    |> maybe_filter_min_hp(min_hp)
+    |> maybe_filter_max_hp(max_hp)
     |> order_by([m], asc: m.type, asc: m.manufacturer)
     |> Repo.all()
+  end
+
+  defp maybe_filter_query(query, ""), do: query
+
+  defp maybe_filter_query(query, q) do
+    pattern = "%#{escape_like(q)}%"
+    downcased = String.downcase(pattern)
+
+    where(
+      query,
+      [m],
+      fragment("lower(?) LIKE ? ESCAPE '\\'", m.manufacturer, ^downcased) or
+        fragment("lower(?) LIKE ? ESCAPE '\\'", m.name, ^downcased)
+    )
+  end
+
+  defp maybe_filter_types(query, []), do: query
+
+  defp maybe_filter_types(query, types) do
+    where(query, [m], m.type in ^types)
+  end
+
+  defp maybe_filter_min_hp(query, nil), do: query
+  defp maybe_filter_min_hp(query, min_hp), do: where(query, [m], m.hp >= ^min_hp)
+
+  defp maybe_filter_max_hp(query, nil), do: query
+  defp maybe_filter_max_hp(query, max_hp), do: where(query, [m], m.hp <= ^max_hp)
+
+  defp positive_integer(value) when is_integer(value) and value > 0, do: value
+
+  defp positive_integer(value) when is_binary(value) do
+    case Integer.parse(String.trim(value)) do
+      {int, ""} when int > 0 -> int
+      _ -> nil
+    end
+  end
+
+  defp positive_integer(_), do: nil
+
+  defp escape_like(value) do
+    value
+    |> String.replace("\\", "\\\\")
+    |> String.replace("%", "\\%")
+    |> String.replace("_", "\\_")
   end
 
   @doc """
@@ -73,8 +141,10 @@ defmodule ModuleOMat.Inventory do
   """
   def list_used_types do
     EurorackModule
+    |> where([m], is_nil(m.deleted_at))
     |> select([m], m.type)
     |> distinct(true)
+    |> order_by([m], asc: m.type)
     |> Repo.all()
     |> Enum.reject(&is_nil/1)
   end

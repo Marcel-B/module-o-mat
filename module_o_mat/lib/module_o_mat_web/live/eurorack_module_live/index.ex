@@ -15,7 +15,8 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
   def mount(_params, _session, socket) do
     {:ok,
      socket
-     |> assign(:eurorack_modules, Inventory.list_eurorack_modules())
+     |> assign_filters(%{})
+     |> reload_eurorack_modules()
      |> assign(:manufacturers, Inventory.list_manufacturers())
      |> assign(:types, available_types())
      |> assign(:module_to_delete, nil)
@@ -79,6 +80,20 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
   end
 
   @impl true
+  def handle_event("filter", params, socket) do
+    {:noreply,
+     socket
+     |> assign_filters(params)
+     |> reload_eurorack_modules()}
+  end
+
+  def handle_event("clear_filters", _params, socket) do
+    {:noreply,
+     socket
+     |> assign_filters(%{})
+     |> reload_eurorack_modules()}
+  end
+
   def handle_event("validate", %{"eurorack_module" => params}, socket) do
     form =
       socket.assigns.eurorack_module
@@ -175,7 +190,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
       {:ok, deleted} ->
         {:noreply,
          socket
-         |> assign(:eurorack_modules, Inventory.list_eurorack_modules())
+         |> reload_eurorack_modules()
          |> refresh_module_types()
          |> put_flash(:info, "Typ \"#{deleted.name}\" wurde geloescht.")}
 
@@ -204,9 +219,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
       {:ok, _deleted} ->
         {:noreply,
          socket
-         |> update(:eurorack_modules, fn modules ->
-           Enum.reject(modules, &(&1.id == eurorack_module.id))
-         end)
+         |> reload_eurorack_modules()
          |> assign(:module_to_delete, nil)
          |> put_flash(:info, "Modul \"#{eurorack_module.name}\" wurde geloescht.")}
 
@@ -229,12 +242,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
          socket
          |> assign(:eurorack_module, eurorack_module)
          |> assign(:form, to_form(Inventory.change_eurorack_module(eurorack_module)))
-         |> update(:eurorack_modules, fn modules ->
-           Enum.map(modules, fn
-             %{id: id} when id == eurorack_module.id -> eurorack_module
-             other -> other
-           end)
-         end)
+         |> reload_eurorack_modules()
          |> put_flash(:info, "PDF-Anleitung wurde entfernt.")}
 
       {:error, _changeset} ->
@@ -249,7 +257,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
           {:ok, eurorack_module} ->
             {:noreply,
              socket
-             |> update(:eurorack_modules, &[eurorack_module | &1])
+             |> reload_eurorack_modules()
              |> assign(:manufacturers, Inventory.list_manufacturers())
              |> assign(:types, available_types())
              |> put_flash(:info, "Modul \"#{eurorack_module.name}\" wurde gespeichert.")
@@ -258,7 +266,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
           {:error, :manual_upload} ->
             {:noreply,
              socket
-             |> update(:eurorack_modules, &[eurorack_module | &1])
+             |> reload_eurorack_modules()
              |> assign(:manufacturers, Inventory.list_manufacturers())
              |> assign(:types, available_types())
              |> put_flash(
@@ -280,12 +288,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
           {:ok, eurorack_module} ->
             {:noreply,
              socket
-             |> update(:eurorack_modules, fn modules ->
-               Enum.map(modules, fn
-                 %{id: id} when id == eurorack_module.id -> eurorack_module
-                 other -> other
-               end)
-             end)
+             |> reload_eurorack_modules()
              |> assign(:manufacturers, Inventory.list_manufacturers())
              |> assign(:types, available_types())
              |> put_flash(:info, "Modul \"#{eurorack_module.name}\" wurde aktualisiert.")
@@ -294,12 +297,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
           {:error, :manual_upload} ->
             {:noreply,
              socket
-             |> update(:eurorack_modules, fn modules ->
-               Enum.map(modules, fn
-                 %{id: id} when id == eurorack_module.id -> eurorack_module
-                 other -> other
-               end)
-             end)
+             |> reload_eurorack_modules()
              |> assign(:manufacturers, Inventory.list_manufacturers())
              |> assign(:types, available_types())
              |> put_flash(
@@ -340,6 +338,48 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
     eurorack_modules
     |> Enum.sort_by(&{&1.type, String.downcase(&1.manufacturer)})
     |> Enum.chunk_by(& &1.type)
+  end
+
+  defp reload_eurorack_modules(socket) do
+    types =
+      case socket.assigns.selected_type do
+        "" -> []
+        type -> [type]
+      end
+
+    socket
+    |> assign(
+      :eurorack_modules,
+      Inventory.list_eurorack_modules(
+        q: socket.assigns.search_query,
+        types: types,
+        min_hp: socket.assigns.min_hp,
+        max_hp: socket.assigns.max_hp
+      )
+    )
+    |> assign(:filter_types, Inventory.list_used_types())
+  end
+
+  defp assign_filters(socket, params) when is_map(params) do
+    q = params |> Map.get("q", "") |> to_string()
+    type = params |> Map.get("type", "") |> to_string()
+    min_hp = params |> Map.get("min_hp", "") |> to_string()
+    max_hp = params |> Map.get("max_hp", "") |> to_string()
+
+    socket
+    |> assign(:search_query, q)
+    |> assign(:selected_type, type)
+    |> assign(:min_hp, min_hp)
+    |> assign(:max_hp, max_hp)
+    |> assign(
+      :filter_form,
+      to_form(%{"q" => q, "type" => type, "min_hp" => min_hp, "max_hp" => max_hp})
+    )
+    |> assign(:filters_active?, filters_active?(q, type, min_hp, max_hp))
+  end
+
+  defp filters_active?(q, type, min_hp, max_hp) do
+    String.trim(q) != "" or type != "" or String.trim(min_hp) != "" or String.trim(max_hp) != ""
   end
 
   defp available_types do
@@ -414,7 +454,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
       </div>
       <div class="sm:col-span-2">
         <div :if={@disabled} class="fieldset mb-2">
-          <span class="label mb-1">Anleitung / Produktseite (URL)</span>
+          <span class="label mb-1">Produktseite (URL)</span>
           <a
             :if={@form[:manual_url].value not in [nil, ""]}
             id="manual-url-link"
@@ -433,7 +473,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
           :if={!@disabled}
           field={@form[:manual_url]}
           type="text"
-          label="Anleitung / Produktseite (URL)"
+          label="Produktseite (URL)"
         />
       </div>
       <div class="sm:col-span-2">
