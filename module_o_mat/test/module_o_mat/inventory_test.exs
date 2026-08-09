@@ -3,6 +3,8 @@ defmodule ModuleOMat.InventoryTest do
 
   alias ModuleOMat.Inventory
   alias ModuleOMat.Inventory.EurorackModule
+  alias ModuleOMat.Inventory.ModuleType
+  alias ModuleOMat.Repo
 
   import ModuleOMat.InventoryFixtures
 
@@ -15,7 +17,7 @@ defmodule ModuleOMat.InventoryTest do
       assert eurorack_module.manufacturer == "Make Noise"
       assert eurorack_module.name == "Maths"
       assert eurorack_module.hp == 20
-      assert eurorack_module.type == :envelope
+      assert eurorack_module.type == "Envelope"
       assert eurorack_module.current_draw_plus12v_ma == 55
       assert eurorack_module.current_draw_minus12v_ma == 30
       assert eurorack_module.current_draw_plus5v_ma == nil
@@ -45,11 +47,23 @@ defmodule ModuleOMat.InventoryTest do
       assert "muss ausgefuellt werden" in errors.type
     end
 
-    test "liefert einen Fehler bei ungueltigem type" do
-      attrs = valid_eurorack_module_attrs(%{type: :not_a_real_type})
+    test "erlaubt einen neuen, noch nicht vorhandenen Typ" do
+      attrs = valid_eurorack_module_attrs(%{type: "Granular"})
+
+      assert {:ok, %EurorackModule{type: "Granular"}} = Inventory.create_eurorack_module(attrs)
+    end
+
+    test "entfernt fuehrende und abschliessende Leerzeichen aus dem Typ" do
+      attrs = valid_eurorack_module_attrs(%{type: "  VCO  "})
+
+      assert {:ok, %EurorackModule{type: "VCO"}} = Inventory.create_eurorack_module(attrs)
+    end
+
+    test "liefert einen Fehler, wenn der Typ nur aus Leerzeichen besteht" do
+      attrs = valid_eurorack_module_attrs(%{type: "   "})
 
       assert {:error, changeset} = Inventory.create_eurorack_module(attrs)
-      assert "is invalid" in errors_on(changeset).type
+      assert "muss ausgefuellt werden" in errors_on(changeset).type
     end
 
     test "liefert einen Fehler bei hp <= 0" do
@@ -96,15 +110,157 @@ defmodule ModuleOMat.InventoryTest do
     end
 
     test "sortiert nach Typ und innerhalb eines Typs nach Hersteller" do
-      eurorack_module_fixture(%{manufacturer: "Mutable Instruments", name: "Plaits", type: :vco})
-      eurorack_module_fixture(%{manufacturer: "Make Noise", name: "STO", type: :vco})
-      eurorack_module_fixture(%{manufacturer: "Doepfer", name: "A-140", type: :envelope})
+      eurorack_module_fixture(%{manufacturer: "Mutable Instruments", name: "Plaits", type: "VCO"})
+      eurorack_module_fixture(%{manufacturer: "Make Noise", name: "STO", type: "VCO"})
+      eurorack_module_fixture(%{manufacturer: "Doepfer", name: "A-140", type: "Envelope"})
 
       assert Inventory.list_eurorack_modules() |> Enum.map(&{&1.type, &1.manufacturer}) == [
-               {:envelope, "Doepfer"},
-               {:vco, "Make Noise"},
-               {:vco, "Mutable Instruments"}
+               {"Envelope", "Doepfer"},
+               {"VCO", "Make Noise"},
+               {"VCO", "Mutable Instruments"}
              ]
+    end
+  end
+
+  describe "list_used_types/0" do
+    test "liefert alle bereits an Modulen verwendeten Typen ohne Duplikate, sortiert" do
+      eurorack_module_fixture(%{type: "VCO"})
+      eurorack_module_fixture(%{type: "Envelope"})
+      eurorack_module_fixture(%{type: "Envelope"})
+
+      assert Inventory.list_used_types() == ["Envelope", "VCO"]
+    end
+
+    test "liefert eine leere Liste, wenn keine Module existieren" do
+      assert Inventory.list_used_types() == []
+    end
+  end
+
+  describe "list_module_types/0" do
+    test "enthaelt die per Migration angelegten Standardtypen" do
+      types = Inventory.list_module_types()
+
+      assert "VCO" in types
+      assert "Envelope" in types
+    end
+
+    test "enthaelt neu angelegte Typen zusaetzlich zu den Standardtypen, sortiert" do
+      module_type_fixture(%{name: "Granular"})
+
+      types = Inventory.list_module_types()
+
+      assert "Granular" in types
+      assert types == Enum.sort(types)
+    end
+  end
+
+  describe "create_module_type/1" do
+    test "legt einen neuen Typ mit gueltigem Namen an" do
+      assert {:ok, %ModuleType{name: "Granular"}} =
+               Inventory.create_module_type(valid_module_type_attrs(%{name: "Granular"}))
+    end
+
+    test "entfernt fuehrende und abschliessende Leerzeichen aus dem Namen" do
+      assert {:ok, %ModuleType{name: "Granular"}} =
+               Inventory.create_module_type(valid_module_type_attrs(%{name: "  Granular  "}))
+    end
+
+    test "liefert einen Fehler, wenn der Name fehlt" do
+      assert {:error, changeset} = Inventory.create_module_type(%{})
+      assert "muss ausgefuellt werden" in errors_on(changeset).name
+    end
+
+    test "liefert einen Fehler, wenn der Name nur aus Leerzeichen besteht" do
+      assert {:error, changeset} =
+               Inventory.create_module_type(valid_module_type_attrs(%{name: "   "}))
+
+      assert "muss ausgefuellt werden" in errors_on(changeset).name
+    end
+
+    test "liefert einen Fehler, wenn der Name bereits existiert" do
+      assert {:error, changeset} =
+               Inventory.create_module_type(valid_module_type_attrs(%{name: "VCO"}))
+
+      assert "existiert bereits" in errors_on(changeset).name
+    end
+  end
+
+  describe "change_module_type/2" do
+    test "liefert ein Changeset fuer den Typ" do
+      assert %Ecto.Changeset{} = Inventory.change_module_type(%ModuleType{})
+    end
+  end
+
+  describe "update_module_type/2" do
+    test "benennt den Typ um" do
+      module_type = module_type_fixture(%{name: "Granular"})
+
+      assert {:ok, %ModuleType{name: "Granularsynthese"}} =
+               Inventory.update_module_type(module_type, %{name: "Granularsynthese"})
+    end
+
+    test "stellt referenzierende Module auf den neuen Namen um" do
+      module_type = module_type_fixture(%{name: "Granular"})
+      eurorack_module = eurorack_module_fixture(%{type: "Granular"})
+
+      assert {:ok, _updated} =
+               Inventory.update_module_type(module_type, %{name: "Granularsynthese"})
+
+      assert Inventory.get_eurorack_module!(eurorack_module.id).type == "Granularsynthese"
+    end
+
+    test "liefert einen Fehler, wenn der neue Name bereits existiert" do
+      module_type_fixture(%{name: "Granular"})
+      module_type = module_type_fixture(%{name: "Wavetable"})
+
+      assert {:error, changeset} = Inventory.update_module_type(module_type, %{name: "Granular"})
+      assert "existiert bereits" in errors_on(changeset).name
+    end
+
+    test "verweigert das Umbenennen des Fallback-Typs" do
+      fallback = Repo.get_by!(ModuleType, name: Inventory.fallback_type_name())
+
+      assert {:error, :fallback_type} = Inventory.update_module_type(fallback, %{name: "Andere"})
+    end
+  end
+
+  describe "delete_module_type/1" do
+    test "loescht den Typ" do
+      module_type = module_type_fixture(%{name: "Granular"})
+
+      assert {:ok, %ModuleType{}} = Inventory.delete_module_type(module_type)
+      refute Inventory.list_module_types() |> Enum.member?("Granular")
+    end
+
+    test "stellt referenzierende Module auf den Fallback-Typ um" do
+      module_type = module_type_fixture(%{name: "Granular"})
+      eurorack_module = eurorack_module_fixture(%{type: "Granular"})
+
+      assert {:ok, _deleted} = Inventory.delete_module_type(module_type)
+
+      assert Inventory.get_eurorack_module!(eurorack_module.id).type ==
+               Inventory.fallback_type_name()
+    end
+
+    test "verweigert das Loeschen des Fallback-Typs" do
+      fallback = Repo.get_by!(ModuleType, name: Inventory.fallback_type_name())
+
+      assert {:error, :fallback_type} = Inventory.delete_module_type(fallback)
+      assert Inventory.fallback_type_name() in Inventory.list_module_types()
+    end
+  end
+
+  describe "list_manufacturers/0" do
+    test "liefert alle bereits erfassten Herstellernamen ohne Duplikate, sortiert" do
+      eurorack_module_fixture(%{manufacturer: "Mutable Instruments", name: "Plaits"})
+      eurorack_module_fixture(%{manufacturer: "Make Noise", name: "Maths"})
+      eurorack_module_fixture(%{manufacturer: "Make Noise", name: "Maths II"})
+
+      assert Inventory.list_manufacturers() == ["Make Noise", "Mutable Instruments"]
+    end
+
+    test "liefert eine leere Liste, wenn keine Module existieren" do
+      assert Inventory.list_manufacturers() == []
     end
   end
 

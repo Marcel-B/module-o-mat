@@ -15,7 +15,7 @@ defmodule ModuleOMat.InventoryFixtures do
       manufacturer: "Make Noise",
       name: "Maths",
       hp: 20,
-      type: :envelope,
+      type: "Envelope",
       current_draw_plus12v_ma: 55,
       current_draw_minus12v_ma: 30,
       current_draw_plus5v_ma: nil,
@@ -36,5 +36,26 @@ defmodule ModuleOMat.InventoryFixtures do
       |> Inventory.create_eurorack_module()
 
     eurorack_module
+  end
+
+  @doc """
+  Gueltige Standard-Attribute fuer einen Modultyp, ueberschreibbar per
+  `attrs`.
+  """
+  def valid_module_type_attrs(attrs \\ %{}) do
+    Enum.into(attrs, %{name: "Granular"})
+  end
+
+  @doc """
+  Legt einen Modultyp mit validen (ggf. ueberschriebenen) Attributen an und
+  liefert den erzeugten Datensatz zurueck.
+  """
+  def module_type_fixture(attrs \\ %{}) do
+    {:ok, module_type} =
+      attrs
+      |> valid_module_type_attrs()
+      |> Inventory.create_module_type()
+
+    module_type
   end
 end
