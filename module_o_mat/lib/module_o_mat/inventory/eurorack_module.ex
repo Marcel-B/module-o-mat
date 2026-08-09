@@ -75,6 +75,8 @@ defmodule ModuleOMat.Inventory.EurorackModule do
     field(:description, :string)
     field(:manual_url, :string)
 
+    field(:deleted_at, :utc_datetime)
+
     timestamps(type: :utc_datetime)
   end
 

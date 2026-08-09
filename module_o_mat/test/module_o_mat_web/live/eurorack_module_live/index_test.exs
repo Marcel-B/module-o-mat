@@ -109,4 +109,185 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
       assert Inventory.list_eurorack_modules() == []
     end
   end
+
+  describe "Modul anzeigen" do
+    test "oeffnet den Dialog im Anzeige-Modus mit den Moduldaten, ohne editierbar zu sein", %{
+      conn: conn
+    } do
+      eurorack_module =
+        eurorack_module_fixture(%{manufacturer: "Make Noise", name: "Maths"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      view
+      |> element("#show-eurorack-module-#{eurorack_module.id}")
+      |> render_click()
+
+      assert_patch(view, ~p"/eurorack_modules/#{eurorack_module.id}")
+      assert has_element?(view, "#eurorack-module-modal")
+
+      html = render(view)
+      assert html =~ "Modul anzeigen"
+      assert has_element?(view, "#eurorack-module-show")
+      refute has_element?(view, "#eurorack-module-form")
+      assert has_element?(view, "#eurorack-module-show input[disabled]")
+      assert has_element?(view, "#eurorack-module-show select[disabled]")
+      assert has_element?(view, "#eurorack-module-show input[value='Maths']")
+      refute has_element?(view, "#save-eurorack-module-button")
+    end
+
+    test "schliesst den Dialog ueber 'Schliessen'", %{conn: conn} do
+      eurorack_module = eurorack_module_fixture()
+
+      {:ok, view, _html} = live(conn, ~p"/eurorack_modules/#{eurorack_module.id}")
+
+      assert has_element?(view, "#eurorack-module-modal")
+
+      view
+      |> element("#close-eurorack-module-button")
+      |> render_click()
+
+      assert_patch(view, ~p"/")
+      refute has_element?(view, "#eurorack-module-modal")
+    end
+  end
+
+  describe "Modul bearbeiten" do
+    test "oeffnet den Dialog im Bearbeiten-Modus mit vorausgefuellten, editierbaren Feldern", %{
+      conn: conn
+    } do
+      eurorack_module =
+        eurorack_module_fixture(%{manufacturer: "Make Noise", name: "Maths"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      view
+      |> element("#edit-eurorack-module-#{eurorack_module.id}")
+      |> render_click()
+
+      assert_patch(view, ~p"/eurorack_modules/#{eurorack_module.id}/edit")
+
+      html = render(view)
+      assert html =~ "Modul bearbeiten"
+      assert has_element?(view, "#eurorack-module-form")
+      refute has_element?(view, "#eurorack-module-form input[disabled]")
+      assert has_element?(view, "#eurorack-module-form input[value='Maths']")
+      assert has_element?(view, "#save-eurorack-module-button")
+    end
+
+    test "zeigt Validierungsfehler beim Bearbeiten an und laesst den Dialog offen", %{
+      conn: conn
+    } do
+      eurorack_module = eurorack_module_fixture()
+
+      {:ok, view, _html} = live(conn, ~p"/eurorack_modules/#{eurorack_module.id}/edit")
+
+      html =
+        view
+        |> form("#eurorack-module-form", eurorack_module: %{name: "", hp: "0"})
+        |> render_submit()
+
+      assert has_element?(view, "#eurorack-module-modal")
+      assert html =~ "muss ausgefuellt werden"
+      assert html =~ "muss groesser als 0 sein"
+
+      assert Inventory.get_eurorack_module!(eurorack_module.id).name == eurorack_module.name
+    end
+
+    test "aktualisiert bei gueltigen Daten das Modul, schliesst den Dialog und zeigt die Aenderung in der Tabelle",
+         %{conn: conn} do
+      eurorack_module =
+        eurorack_module_fixture(%{manufacturer: "Make Noise", name: "Maths", hp: 20})
+
+      {:ok, view, _html} = live(conn, ~p"/eurorack_modules/#{eurorack_module.id}/edit")
+
+      html =
+        view
+        |> form("#eurorack-module-form", eurorack_module: %{name: "Maths (aktualisiert)"})
+        |> render_submit()
+
+      assert_patch(view, ~p"/")
+      refute has_element?(view, "#eurorack-module-modal")
+      assert html =~ "wurde aktualisiert"
+
+      assert Inventory.get_eurorack_module!(eurorack_module.id).name == "Maths (aktualisiert)"
+      assert has_element?(view, "#eurorack-module-#{eurorack_module.id}", "Maths (aktualisiert)")
+    end
+
+    test "bricht die Bearbeitung ueber 'Abbrechen' ab, ohne etwas zu speichern", %{conn: conn} do
+      eurorack_module = eurorack_module_fixture()
+
+      {:ok, view, _html} = live(conn, ~p"/eurorack_modules/#{eurorack_module.id}/edit")
+
+      view
+      |> element("#cancel-eurorack-module-button")
+      |> render_click()
+
+      assert_patch(view, ~p"/")
+      refute has_element?(view, "#eurorack-module-modal")
+      assert Inventory.get_eurorack_module!(eurorack_module.id).name == eurorack_module.name
+    end
+  end
+
+  describe "Modul loeschen" do
+    test "zeigt eine Sicherheitsabfrage beim Klick auf 'Loeschen' an", %{conn: conn} do
+      eurorack_module = eurorack_module_fixture(%{name: "Maths"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      refute has_element?(view, "#delete-eurorack-module-modal")
+
+      html =
+        view
+        |> element("#delete-eurorack-module-#{eurorack_module.id}")
+        |> render_click()
+
+      assert has_element?(view, "#delete-eurorack-module-modal")
+      assert html =~ "Maths"
+      assert Inventory.list_eurorack_modules() |> Enum.any?(&(&1.id == eurorack_module.id))
+    end
+
+    test "bricht das Loeschen ueber 'Abbrechen' ab, ohne das Modul zu entfernen", %{conn: conn} do
+      eurorack_module = eurorack_module_fixture()
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      view
+      |> element("#delete-eurorack-module-#{eurorack_module.id}")
+      |> render_click()
+
+      assert has_element?(view, "#delete-eurorack-module-modal")
+
+      view
+      |> element("#cancel-delete-eurorack-module-button")
+      |> render_click()
+
+      refute has_element?(view, "#delete-eurorack-module-modal")
+      assert has_element?(view, "#eurorack-module-#{eurorack_module.id}")
+      assert Inventory.get_eurorack_module!(eurorack_module.id).deleted_at == nil
+    end
+
+    test "markiert das Modul nach Bestaetigung als geloescht und entfernt es aus der Tabelle",
+         %{conn: conn} do
+      eurorack_module = eurorack_module_fixture(%{name: "Maths"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      view
+      |> element("#delete-eurorack-module-#{eurorack_module.id}")
+      |> render_click()
+
+      html =
+        view
+        |> element("#confirm-delete-eurorack-module-button")
+        |> render_click()
+
+      refute has_element?(view, "#delete-eurorack-module-modal")
+      refute has_element?(view, "#eurorack-module-#{eurorack_module.id}")
+      assert html =~ "wurde geloescht"
+
+      assert Inventory.get_eurorack_module!(eurorack_module.id).deleted_at != nil
+      refute Inventory.list_eurorack_modules() |> Enum.any?(&(&1.id == eurorack_module.id))
+    end
+  end
 end

@@ -12,10 +12,12 @@ defmodule ModuleOMat.Inventory do
   alias ModuleOMat.Inventory.EurorackModule
 
   @doc """
-  Liefert alle erfassten Eurorack-Module, sortiert nach Typ und Hersteller.
+  Liefert alle nicht geloeschten Eurorack-Module, sortiert nach Typ und
+  Hersteller.
   """
   def list_eurorack_modules do
     EurorackModule
+    |> where([m], is_nil(m.deleted_at))
     |> order_by([m], asc: m.type, asc: m.manufacturer)
     |> Repo.all()
   end
@@ -48,10 +50,21 @@ defmodule ModuleOMat.Inventory do
   end
 
   @doc """
-  Loescht ein Eurorack-Modul.
+  Loescht ein Eurorack-Modul unwiderruflich aus der Datenbank.
   """
   def delete_eurorack_module(%EurorackModule{} = eurorack_module) do
     Repo.delete(eurorack_module)
+  end
+
+  @doc """
+  Markiert ein Eurorack-Modul als geloescht (Soft-Delete), ohne den
+  Datensatz aus der Datenbank zu entfernen. Ein so markiertes Modul taucht
+  nicht mehr in `list_eurorack_modules/0` auf.
+  """
+  def soft_delete_eurorack_module(%EurorackModule{} = eurorack_module) do
+    eurorack_module
+    |> Ecto.Changeset.change(deleted_at: DateTime.utc_now(:second))
+    |> Repo.update()
   end
 
   @doc """
