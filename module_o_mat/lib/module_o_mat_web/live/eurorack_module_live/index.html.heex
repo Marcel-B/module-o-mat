@@ -29,6 +29,7 @@
           <th>Modul</th>
           <th>Typ</th>
           <th>HP</th>
+          <th class="text-right">Aktionen</th>
         </tr>
       </thead>
       <tbody>
@@ -37,58 +38,106 @@
           <td>{eurorack_module.name}</td>
           <td>{type_label(eurorack_module.type)}</td>
           <td>{eurorack_module.hp}</td>
+          <td>
+            <div class="flex gap-2 justify-end">
+              <.link
+                patch={~p"/eurorack_modules/#{eurorack_module.id}"}
+                id={"show-eurorack-module-#{eurorack_module.id}"}
+                class="btn btn-ghost btn-xs"
+                title="Anzeigen"
+                aria-label="Anzeigen"
+              >
+                <.icon name="hero-eye" />
+              </.link>
+              <.link
+                patch={~p"/eurorack_modules/#{eurorack_module.id}/edit"}
+                id={"edit-eurorack-module-#{eurorack_module.id}"}
+                class="btn btn-ghost btn-xs"
+                title="Bearbeiten"
+                aria-label="Bearbeiten"
+              >
+                <.icon name="hero-pencil-square" />
+              </.link>
+              <button
+                type="button"
+                id={"delete-eurorack-module-#{eurorack_module.id}"}
+                class="btn btn-ghost btn-xs text-error"
+                title="Loeschen"
+                aria-label="Loeschen"
+                phx-click="delete"
+                phx-value-id={eurorack_module.id}
+              >
+                <.icon name="hero-trash" />
+              </button>
+            </div>
+          </td>
         </tr>
       </tbody>
     </table>
   </div>
 
-  <.modal :if={@live_action == :new} id="eurorack-module-modal" box_class="sm:max-w-2xl">
-    <:title>Neues Modul erfassen</:title>
+  <.modal
+    :if={@live_action in [:new, :edit, :show]}
+    id="eurorack-module-modal"
+    box_class="sm:max-w-2xl"
+  >
+    <:title>{@page_title}</:title>
 
-    <.form for={@form} id="eurorack-module-form" phx-change="validate" phx-submit="save">
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
-        <.input field={@form[:manufacturer]} type="text" label="Hersteller" />
-        <.input field={@form[:name]} type="text" label="Name" />
-        <.input field={@form[:hp]} type="number" label="HP" />
-        <.input
-          field={@form[:type]}
-          type="select"
-          label="Typ"
-          prompt="Bitte waehlen"
-          options={EurorackModule.type_options()}
-        />
-        <.input
-          field={@form[:current_draw_plus12v_ma]}
-          type="number"
-          label="Strombedarf +12V (mA)"
-        />
-        <.input
-          field={@form[:current_draw_minus12v_ma]}
-          type="number"
-          label="Strombedarf -12V (mA)"
-        />
-        <.input
-          field={@form[:current_draw_plus5v_ma]}
-          type="number"
-          label="Strombedarf +5V (mA)"
-        />
-        <.input field={@form[:depth_mm]} type="number" label="Tiefe (mm)" />
-        <div class="sm:col-span-2">
-          <.input field={@form[:description]} type="textarea" label="Beschreibung" />
-        </div>
-        <div class="sm:col-span-2">
-          <.input field={@form[:manual_url]} type="text" label="Anleitung / Produktseite (URL)" />
-        </div>
+    <div :if={@live_action == :show} id="eurorack-module-show">
+      <.eurorack_module_fields form={@form} disabled={true} />
+
+      <div class="flex gap-2 justify-end mt-4">
+        <.link patch={~p"/"} id="close-eurorack-module-button" class="btn">
+          Schliessen
+        </.link>
       </div>
+    </div>
+
+    <.form
+      :if={@live_action in [:new, :edit]}
+      for={@form}
+      id="eurorack-module-form"
+      phx-change="validate"
+      phx-submit="save"
+    >
+      <.eurorack_module_fields form={@form} disabled={false} />
 
       <div class="flex gap-2 justify-end mt-4">
         <.link patch={~p"/"} id="cancel-eurorack-module-button" class="btn">
           Abbrechen
         </.link>
         <.button type="submit" variant="primary" id="save-eurorack-module-button">
-          Speichern
+          {if @live_action == :edit, do: "Aktualisieren", else: "Speichern"}
         </.button>
       </div>
     </.form>
+  </.modal>
+
+  <.modal :if={@module_to_delete} id="delete-eurorack-module-modal">
+    <:title>Modul loeschen</:title>
+
+    <p>
+      Soll das Modul <strong>{@module_to_delete && @module_to_delete.name}</strong>
+      wirklich geloescht werden? Diese Aktion kann nicht rueckgaengig gemacht werden.
+    </p>
+
+    <div class="flex gap-2 justify-end mt-4">
+      <button
+        type="button"
+        id="cancel-delete-eurorack-module-button"
+        class="btn"
+        phx-click="cancel_delete"
+      >
+        Abbrechen
+      </button>
+      <button
+        type="button"
+        id="confirm-delete-eurorack-module-button"
+        class="btn btn-error"
+        phx-click="confirm_delete"
+      >
+        Loeschen
+      </button>
+    </div>
   </.modal>
 </Layouts.app>

@@ -83,6 +83,18 @@ defmodule ModuleOMat.InventoryTest do
       assert Inventory.list_eurorack_modules() == []
     end
 
+    test "enthaelt keine als geloescht markierten Module" do
+      sichtbares_modul = eurorack_module_fixture(%{name: "Maths"})
+      geloeschtes_modul = eurorack_module_fixture(%{name: "Plaits"})
+
+      {:ok, _} = Inventory.soft_delete_eurorack_module(geloeschtes_modul)
+
+      ids = Inventory.list_eurorack_modules() |> Enum.map(& &1.id)
+
+      assert sichtbares_modul.id in ids
+      refute geloeschtes_modul.id in ids
+    end
+
     test "sortiert nach Typ und innerhalb eines Typs nach Hersteller" do
       eurorack_module_fixture(%{manufacturer: "Mutable Instruments", name: "Plaits", type: :vco})
       eurorack_module_fixture(%{manufacturer: "Make Noise", name: "STO", type: :vco})
@@ -144,6 +156,18 @@ defmodule ModuleOMat.InventoryTest do
       assert_raise Ecto.NoResultsError, fn ->
         Inventory.get_eurorack_module!(eurorack_module.id)
       end
+    end
+  end
+
+  describe "soft_delete_eurorack_module/1" do
+    test "setzt deleted_at, ohne den Datensatz zu entfernen" do
+      eurorack_module = eurorack_module_fixture()
+
+      assert {:ok, %EurorackModule{} = deleted} =
+               Inventory.soft_delete_eurorack_module(eurorack_module)
+
+      assert %DateTime{} = deleted.deleted_at
+      assert Inventory.get_eurorack_module!(eurorack_module.id).deleted_at != nil
     end
   end
 

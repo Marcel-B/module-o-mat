@@ -19,6 +19,8 @@ defmodule ModuleOMatWeb.Router do
 
     live "/", EurorackModuleLive.Index, :index
     live "/eurorack_modules/new", EurorackModuleLive.Index, :new
+    live "/eurorack_modules/:id", EurorackModuleLive.Index, :show
+    live "/eurorack_modules/:id/edit", EurorackModuleLive.Index, :edit
   end
 
   # Other scopes may use custom stacks.
