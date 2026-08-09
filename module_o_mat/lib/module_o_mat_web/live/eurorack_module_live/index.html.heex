@@ -2,6 +2,9 @@
   <.header>
     Eurorack-Module
     <:actions>
+      <.link patch={~p"/module_types"} id="manage-module-types-button" class="btn">
+        Typen verwalten
+      </.link>
       <.link
         patch={~p"/eurorack_modules/new"}
         id="new-eurorack-module-button"
@@ -18,7 +21,7 @@
 
   <div :for={group <- grouped_eurorack_modules(@eurorack_modules)} class="mb-8">
     <h2 class="text-base font-semibold mb-2">
-      {type_label(hd(group).type)}
+      {hd(group).type}
       <span class="text-base-content/50 font-normal">({length(group)})</span>
     </h2>
 
@@ -36,7 +39,7 @@
         <tr :for={eurorack_module <- group} id={"eurorack-module-#{eurorack_module.id}"}>
           <td>{eurorack_module.manufacturer}</td>
           <td>{eurorack_module.name}</td>
-          <td>{type_label(eurorack_module.type)}</td>
+          <td>{eurorack_module.type}</td>
           <td>{eurorack_module.hp}</td>
           <td>
             <div class="flex gap-2 justify-end">
@@ -84,7 +87,12 @@
     <:title>{@page_title}</:title>
 
     <div :if={@live_action == :show} id="eurorack-module-show">
-      <.eurorack_module_fields form={@form} disabled={true} />
+      <.eurorack_module_fields
+        form={@form}
+        disabled={true}
+        manufacturers={@manufacturers}
+        types={@types}
+      />
 
       <div class="flex gap-2 justify-end mt-4">
         <.link patch={~p"/"} id="close-eurorack-module-button" class="btn">
@@ -100,7 +108,12 @@
       phx-change="validate"
       phx-submit="save"
     >
-      <.eurorack_module_fields form={@form} disabled={false} />
+      <.eurorack_module_fields
+        form={@form}
+        disabled={false}
+        manufacturers={@manufacturers}
+        types={@types}
+      />
 
       <div class="flex gap-2 justify-end mt-4">
         <.link patch={~p"/"} id="cancel-eurorack-module-button" class="btn">
@@ -108,6 +121,113 @@
         </.link>
         <.button type="submit" variant="primary" id="save-eurorack-module-button">
           {if @live_action == :edit, do: "Aktualisieren", else: "Speichern"}
+        </.button>
+      </div>
+    </.form>
+  </.modal>
+
+  <.modal :if={@live_action == :manage_types} id="module-types-modal">
+    <:title>Typen verwalten</:title>
+
+    <div class="mb-4">
+      <h4 class="font-semibold text-sm mb-2">Vorhandene Typen</h4>
+      <p class="text-base-content/70 text-xs mb-2">
+        Bereits verwendete Typen sind farblich hervorgehoben.
+      </p>
+      <p :if={@module_types == []} class="text-base-content/70 text-sm">
+        Es sind noch keine Typen definiert.
+      </p>
+      <ul :if={@module_types != []} id="module-types-list" class="flex flex-wrap gap-2">
+        <li :for={module_type <- @module_types} id={"module-type-#{module_type.id}"}>
+          <.form
+            :if={@editing_module_type && @editing_module_type.id == module_type.id}
+            for={@module_type_edit_form}
+            id={"module-type-edit-form-#{module_type.id}"}
+            phx-change="validate_edit_module_type"
+            phx-submit="update_module_type"
+            class="flex items-center gap-1"
+          >
+            <.input
+              field={@module_type_edit_form[:name]}
+              type="text"
+              id={"module-type-edit-name-#{module_type.id}"}
+              class="input input-xs"
+            />
+            <button
+              type="submit"
+              class="btn btn-ghost btn-xs"
+              title="Speichern"
+              aria-label={"Typ #{module_type.name} speichern"}
+            >
+              <.icon name="hero-check" class="size-4" />
+            </button>
+            <button
+              type="button"
+              class="btn btn-ghost btn-xs"
+              title="Abbrechen"
+              aria-label="Bearbeiten abbrechen"
+              phx-click="cancel_edit_module_type"
+            >
+              <.icon name="hero-x-mark" class="size-4" />
+            </button>
+          </.form>
+
+          <div
+            :if={!(@editing_module_type && @editing_module_type.id == module_type.id)}
+            class={[
+              "badge gap-1",
+              (module_type.name in @used_module_types && "badge-primary") || "badge-outline"
+            ]}
+          >
+            {module_type.name}
+            <button
+              :if={module_type.name != Inventory.fallback_type_name()}
+              type="button"
+              id={"edit-module-type-#{module_type.id}"}
+              class="cursor-pointer"
+              title="Bearbeiten"
+              aria-label={"Typ #{module_type.name} bearbeiten"}
+              phx-click="edit_module_type"
+              phx-value-id={module_type.id}
+            >
+              <.icon name="hero-pencil-square" class="size-3" />
+            </button>
+            <button
+              :if={module_type.name != Inventory.fallback_type_name()}
+              type="button"
+              id={"delete-module-type-#{module_type.id}"}
+              class="cursor-pointer"
+              title="Loeschen"
+              aria-label={"Typ #{module_type.name} loeschen"}
+              phx-click="delete_module_type"
+              phx-value-id={module_type.id}
+            >
+              <.icon name="hero-x-mark" class="size-3" />
+            </button>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <.form
+      for={@module_type_form}
+      id="module-type-form"
+      phx-change="validate_module_type"
+      phx-submit="add_module_type"
+    >
+      <.input
+        field={@module_type_form[:name]}
+        type="text"
+        label="Neuer Typ"
+        placeholder="z.B. Granular"
+      />
+
+      <div class="flex gap-2 justify-end mt-4">
+        <.link patch={~p"/"} id="close-module-types-button" class="btn">
+          Schliessen
+        </.link>
+        <.button type="submit" variant="primary" id="add-module-type-button">
+          Hinzufuegen
         </.button>
       </div>
     </.form>

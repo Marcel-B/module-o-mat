@@ -15,14 +15,14 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
     test "zeigt erfasste Module gruppiert nach Typ und sortiert nach Hersteller an", %{
       conn: conn
     } do
-      eurorack_module_fixture(%{manufacturer: "Doepfer", name: "A-140", type: :envelope})
-      eurorack_module_fixture(%{manufacturer: "Mutable Instruments", name: "Plaits", type: :vco})
-      eurorack_module_fixture(%{manufacturer: "Make Noise", name: "STO", type: :vco})
+      eurorack_module_fixture(%{manufacturer: "Doepfer", name: "A-140", type: "Envelope"})
+      eurorack_module_fixture(%{manufacturer: "Mutable Instruments", name: "Plaits", type: "VCO"})
+      eurorack_module_fixture(%{manufacturer: "Make Noise", name: "STO", type: "VCO"})
 
       {:ok, view, _html} = live(conn, ~p"/")
 
-      assert has_element?(view, "#eurorack-modules-envelope")
-      assert has_element?(view, "#eurorack-modules-vco")
+      assert has_element?(view, "#eurorack-modules-Envelope")
+      assert has_element?(view, "#eurorack-modules-VCO")
 
       html = render(view)
 
@@ -76,7 +76,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
         "manufacturer" => "Make Noise",
         "name" => "Maths",
         "hp" => "20",
-        "type" => "envelope"
+        "type" => "Envelope"
       }
 
       html =
@@ -93,6 +93,36 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
       assert eurorack_module.name == "Maths"
 
       assert has_element?(view, "#eurorack-module-#{eurorack_module.id}")
+    end
+
+    test "schlaegt bereits erfasste Herstellernamen als Autocomplete-Optionen vor", %{
+      conn: conn
+    } do
+      eurorack_module_fixture(%{manufacturer: "Make Noise"})
+      eurorack_module_fixture(%{manufacturer: "Mutable Instruments"})
+
+      {:ok, view, _html} = live(conn, ~p"/eurorack_modules/new")
+
+      assert has_element?(
+               view,
+               "input[name='eurorack_module[manufacturer]'][list='manufacturer-options']"
+             )
+
+      assert has_element?(view, "datalist#manufacturer-options option[value='Make Noise']")
+
+      assert has_element?(
+               view,
+               "datalist#manufacturer-options option[value='Mutable Instruments']"
+             )
+    end
+
+    test "zeigt definierte und bereits verwendete Typen als Auswahloptionen an", %{conn: conn} do
+      eurorack_module_fixture(%{type: "Granular"})
+
+      {:ok, view, _html} = live(conn, ~p"/eurorack_modules/new")
+
+      assert has_element?(view, "select[name='eurorack_module[type]'] option[value='VCO']")
+      assert has_element?(view, "select[name='eurorack_module[type]'] option[value='Granular']")
     end
 
     test "bricht die Erfassung ueber 'Abbrechen' ab, ohne etwas zu speichern", %{conn: conn} do
@@ -115,7 +145,11 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
       conn: conn
     } do
       eurorack_module =
-        eurorack_module_fixture(%{manufacturer: "Make Noise", name: "Maths"})
+        eurorack_module_fixture(%{
+          manufacturer: "Make Noise",
+          name: "Maths",
+          manual_url: "https://www.makenoisemusic.com/technology/maths"
+        })
 
       {:ok, view, _html} = live(conn, ~p"/")
 
@@ -134,6 +168,20 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
       assert has_element?(view, "#eurorack-module-show select[disabled]")
       assert has_element?(view, "#eurorack-module-show input[value='Maths']")
       refute has_element?(view, "#save-eurorack-module-button")
+
+      assert has_element?(
+               view,
+               "#manual-url-link[href='https://www.makenoisemusic.com/technology/maths']"
+             )
+    end
+
+    test "zeigt einen Hinweis an, wenn keine URL hinterlegt ist", %{conn: conn} do
+      eurorack_module = eurorack_module_fixture(%{manual_url: nil})
+
+      {:ok, view, _html} = live(conn, ~p"/eurorack_modules/#{eurorack_module.id}")
+
+      refute has_element?(view, "#manual-url-link")
+      assert has_element?(view, "#eurorack-module-show", "Keine Angabe")
     end
 
     test "schliesst den Dialog ueber 'Schliessen'", %{conn: conn} do
@@ -289,5 +337,178 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
       assert Inventory.get_eurorack_module!(eurorack_module.id).deleted_at != nil
       refute Inventory.list_eurorack_modules() |> Enum.any?(&(&1.id == eurorack_module.id))
     end
+  end
+
+  describe "Typen verwalten" do
+    test "oeffnet den Dialog beim Klick auf 'Typen verwalten' und zeigt vorhandene Typen an", %{
+      conn: conn
+    } do
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      refute has_element?(view, "#module-types-modal")
+
+      view
+      |> element("#manage-module-types-button")
+      |> render_click()
+
+      assert_patch(view, ~p"/module_types")
+      assert has_element?(view, "#module-types-modal")
+      assert has_element?(view, "#module-types-list", "VCO")
+      assert has_element?(view, "#module-types-list", "Envelope")
+    end
+
+    test "zeigt einen Validierungsfehler bei leerem Namen an", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/module_types")
+
+      html =
+        view
+        |> form("#module-type-form", module_type: %{name: ""})
+        |> render_submit()
+
+      assert has_element?(view, "#module-types-modal")
+      assert html =~ "muss ausgefuellt werden"
+    end
+
+    test "zeigt einen Fehler an, wenn der Typ bereits existiert", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/module_types")
+
+      html =
+        view
+        |> form("#module-type-form", module_type: %{name: "VCO"})
+        |> render_submit()
+
+      assert has_element?(view, "#module-types-modal")
+      assert html =~ "existiert bereits"
+    end
+
+    test "legt bei gueltigem Namen einen neuen Typ an, ohne den Dialog zu schliessen", %{
+      conn: conn
+    } do
+      {:ok, view, _html} = live(conn, ~p"/module_types")
+
+      html =
+        view
+        |> form("#module-type-form", module_type: %{name: "Granular"})
+        |> render_submit()
+
+      assert has_element?(view, "#module-types-modal")
+      assert html =~ "wurde hinzugefuegt"
+      assert has_element?(view, "#module-types-list", "Granular")
+      assert "Granular" in Inventory.list_module_types()
+    end
+
+    test "neu angelegte Typen stehen danach im Auswahlfeld fuer neue Module zur Verfuegung", %{
+      conn: conn
+    } do
+      {:ok, view, _html} = live(conn, ~p"/module_types")
+
+      view
+      |> form("#module-type-form", module_type: %{name: "Granular"})
+      |> render_submit()
+
+      view
+      |> element("#close-module-types-button")
+      |> render_click()
+
+      view
+      |> element("#new-eurorack-module-button")
+      |> render_click()
+
+      assert has_element?(view, "select[name='eurorack_module[type]'] option[value='Granular']")
+    end
+
+    test "schliesst den Dialog ueber 'Schliessen'", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/module_types")
+
+      assert has_element?(view, "#module-types-modal")
+
+      view
+      |> element("#close-module-types-button")
+      |> render_click()
+
+      assert_patch(view, ~p"/")
+      refute has_element?(view, "#module-types-modal")
+    end
+
+    test "hebt bereits verwendete Typen farblich hervor", %{conn: conn} do
+      eurorack_module_fixture(%{type: "VCO"})
+
+      {:ok, view, _html} = live(conn, ~p"/module_types")
+
+      vco_id = module_type_id("VCO")
+      lfo_id = module_type_id("LFO")
+
+      assert has_element?(view, "#module-type-#{vco_id} .badge-primary")
+      assert has_element?(view, "#module-type-#{lfo_id} .badge-outline")
+    end
+
+    test "erlaubt das Umbenennen eines Typs", %{conn: conn} do
+      module_type = module_type_fixture(%{name: "Granular"})
+
+      {:ok, view, _html} = live(conn, ~p"/module_types")
+
+      view
+      |> element("#edit-module-type-#{module_type.id}")
+      |> render_click()
+
+      assert has_element?(view, "#module-type-edit-form-#{module_type.id}")
+
+      html =
+        view
+        |> form("#module-type-edit-form-#{module_type.id}",
+          module_type: %{name: "Granularsynthese"}
+        )
+        |> render_submit()
+
+      assert html =~ "wurde aktualisiert"
+      assert has_element?(view, "#module-types-list", "Granularsynthese")
+      refute has_element?(view, "#module-type-edit-form-#{module_type.id}")
+    end
+
+    test "loescht einen Typ direkt ueber das x am Badge", %{conn: conn} do
+      module_type = module_type_fixture(%{name: "Granular"})
+
+      {:ok, view, _html} = live(conn, ~p"/module_types")
+
+      html =
+        view
+        |> element("#delete-module-type-#{module_type.id}")
+        |> render_click()
+
+      assert html =~ "wurde geloescht"
+      refute has_element?(view, "#module-type-#{module_type.id}")
+      refute "Granular" in Inventory.list_module_types()
+    end
+
+    test "stellt referenzierende Module beim Loeschen des Typs auf 'Sonstiges' um", %{conn: conn} do
+      module_type = module_type_fixture(%{name: "Granular"})
+      eurorack_module = eurorack_module_fixture(%{type: "Granular"})
+
+      {:ok, view, _html} = live(conn, ~p"/module_types")
+
+      view
+      |> element("#delete-module-type-#{module_type.id}")
+      |> render_click()
+
+      assert Inventory.get_eurorack_module!(eurorack_module.id).type ==
+               Inventory.fallback_type_name()
+    end
+
+    test "der Fallback-Typ 'Sonstiges' kann weder bearbeitet noch geloescht werden", %{
+      conn: conn
+    } do
+      {:ok, view, _html} = live(conn, ~p"/module_types")
+
+      fallback_id = module_type_id(Inventory.fallback_type_name())
+
+      refute has_element?(view, "#edit-module-type-#{fallback_id}")
+      refute has_element?(view, "#delete-module-type-#{fallback_id}")
+    end
+  end
+
+  defp module_type_id(name) do
+    Inventory.list_module_type_records()
+    |> Enum.find(&(&1.name == name))
+    |> Map.fetch!(:id)
   end
 end

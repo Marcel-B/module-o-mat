@@ -9,13 +9,21 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
 
   alias ModuleOMat.Inventory
   alias ModuleOMat.Inventory.EurorackModule
+  alias ModuleOMat.Inventory.ModuleType
 
   @impl true
   def mount(_params, _session, socket) do
     {:ok,
      socket
      |> assign(:eurorack_modules, Inventory.list_eurorack_modules())
-     |> assign(:module_to_delete, nil)}
+     |> assign(:manufacturers, Inventory.list_manufacturers())
+     |> assign(:types, available_types())
+     |> assign(:module_to_delete, nil)
+     |> assign(:module_types, [])
+     |> assign(:used_module_types, [])
+     |> assign(:module_type_form, to_form(Inventory.change_module_type(%ModuleType{})))
+     |> assign(:editing_module_type, nil)
+     |> assign(:module_type_edit_form, nil)}
   end
 
   @impl true
@@ -48,6 +56,16 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
     |> assign(:form, to_form(Inventory.change_eurorack_module(eurorack_module)))
   end
 
+  defp apply_action(socket, :manage_types, _params) do
+    socket
+    |> assign(:page_title, "Typen verwalten")
+    |> assign(:module_types, Inventory.list_module_type_records())
+    |> assign(:used_module_types, Inventory.list_used_types())
+    |> assign(:module_type_form, to_form(Inventory.change_module_type(%ModuleType{})))
+    |> assign(:editing_module_type, nil)
+    |> assign(:module_type_edit_form, nil)
+  end
+
   defp apply_action(socket, :index, _params) do
     socket
     |> assign(:page_title, "Eurorack-Module")
@@ -68,6 +86,102 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
 
   def handle_event("save", %{"eurorack_module" => params}, socket) do
     save_eurorack_module(socket, socket.assigns.live_action, params)
+  end
+
+  def handle_event("validate_module_type", %{"module_type" => params}, socket) do
+    form =
+      %ModuleType{}
+      |> Inventory.change_module_type(params)
+      |> Map.put(:action, :validate)
+      |> to_form()
+
+    {:noreply, assign(socket, :module_type_form, form)}
+  end
+
+  def handle_event("add_module_type", %{"module_type" => params}, socket) do
+    case Inventory.create_module_type(params) do
+      {:ok, module_type} ->
+        {:noreply,
+         socket
+         |> refresh_module_types()
+         |> assign(:module_type_form, to_form(Inventory.change_module_type(%ModuleType{})))
+         |> put_flash(:info, "Typ \"#{module_type.name}\" wurde hinzugefuegt.")}
+
+      {:error, changeset} ->
+        {:noreply, assign(socket, :module_type_form, to_form(changeset))}
+    end
+  end
+
+  def handle_event("edit_module_type", %{"id" => id}, socket) do
+    module_type = Enum.find(socket.assigns.module_types, &(&1.id == String.to_integer(id)))
+
+    {:noreply,
+     socket
+     |> assign(:editing_module_type, module_type)
+     |> assign(:module_type_edit_form, to_form(Inventory.change_module_type(module_type)))}
+  end
+
+  def handle_event("cancel_edit_module_type", _params, socket) do
+    {:noreply,
+     socket
+     |> assign(:editing_module_type, nil)
+     |> assign(:module_type_edit_form, nil)}
+  end
+
+  def handle_event("validate_edit_module_type", %{"module_type" => params}, socket) do
+    form =
+      socket.assigns.editing_module_type
+      |> Inventory.change_module_type(params)
+      |> Map.put(:action, :validate)
+      |> to_form()
+
+    {:noreply, assign(socket, :module_type_edit_form, form)}
+  end
+
+  def handle_event("update_module_type", %{"module_type" => params}, socket) do
+    case Inventory.update_module_type(socket.assigns.editing_module_type, params) do
+      {:ok, module_type} ->
+        {:noreply,
+         socket
+         |> refresh_module_types()
+         |> assign(:editing_module_type, nil)
+         |> assign(:module_type_edit_form, nil)
+         |> put_flash(:info, "Typ \"#{module_type.name}\" wurde aktualisiert.")}
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        {:noreply, assign(socket, :module_type_edit_form, to_form(changeset))}
+
+      {:error, :fallback_type} ->
+        {:noreply,
+         socket
+         |> assign(:editing_module_type, nil)
+         |> assign(:module_type_edit_form, nil)
+         |> put_flash(
+           :error,
+           "Der Typ \"#{Inventory.fallback_type_name()}\" kann nicht umbenannt werden."
+         )}
+    end
+  end
+
+  def handle_event("delete_module_type", %{"id" => id}, socket) do
+    module_type = Enum.find(socket.assigns.module_types, &(&1.id == String.to_integer(id)))
+
+    case Inventory.delete_module_type(module_type) do
+      {:ok, deleted} ->
+        {:noreply,
+         socket
+         |> assign(:eurorack_modules, Inventory.list_eurorack_modules())
+         |> refresh_module_types()
+         |> put_flash(:info, "Typ \"#{deleted.name}\" wurde geloescht.")}
+
+      {:error, :fallback_type} ->
+        {:noreply,
+         put_flash(
+           socket,
+           :error,
+           "Der Typ \"#{Inventory.fallback_type_name()}\" kann nicht geloescht werden."
+         )}
+    end
   end
 
   def handle_event("delete", %{"id" => id}, socket) do
@@ -105,6 +219,8 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
         {:noreply,
          socket
          |> update(:eurorack_modules, &[eurorack_module | &1])
+         |> assign(:manufacturers, Inventory.list_manufacturers())
+         |> assign(:types, available_types())
          |> put_flash(:info, "Modul \"#{eurorack_module.name}\" wurde gespeichert.")
          |> push_patch(to: ~p"/")}
 
@@ -124,6 +240,8 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
              other -> other
            end)
          end)
+         |> assign(:manufacturers, Inventory.list_manufacturers())
+         |> assign(:types, available_types())
          |> put_flash(:info, "Modul \"#{eurorack_module.name}\" wurde aktualisiert.")
          |> push_patch(to: ~p"/")}
 
@@ -134,19 +252,41 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
 
   defp grouped_eurorack_modules(eurorack_modules) do
     eurorack_modules
-    |> Enum.sort_by(&{to_string(&1.type), String.downcase(&1.manufacturer)})
+    |> Enum.sort_by(&{&1.type, String.downcase(&1.manufacturer)})
     |> Enum.chunk_by(& &1.type)
   end
 
-  defp type_label(type), do: EurorackModule.type_label(type)
+  defp available_types do
+    (Inventory.list_module_types() ++ Inventory.list_used_types())
+    |> Enum.uniq()
+    |> Enum.sort()
+  end
+
+  defp refresh_module_types(socket) do
+    socket
+    |> assign(:module_types, Inventory.list_module_type_records())
+    |> assign(:used_module_types, Inventory.list_used_types())
+    |> assign(:types, available_types())
+  end
 
   attr :form, Phoenix.HTML.Form, required: true
   attr :disabled, :boolean, default: false
+  attr :manufacturers, :list, default: []
+  attr :types, :list, default: []
 
   defp eurorack_module_fields(assigns) do
     ~H"""
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
-      <.input field={@form[:manufacturer]} type="text" label="Hersteller" disabled={@disabled} />
+      <.input
+        field={@form[:manufacturer]}
+        type="text"
+        label="Hersteller"
+        list="manufacturer-options"
+        disabled={@disabled}
+      />
+      <datalist id="manufacturer-options">
+        <option :for={manufacturer <- @manufacturers} value={manufacturer} />
+      </datalist>
       <.input field={@form[:name]} type="text" label="Name" disabled={@disabled} />
       <.input field={@form[:hp]} type="number" label="HP" disabled={@disabled} />
       <.input
@@ -154,7 +294,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
         type="select"
         label="Typ"
         prompt="Bitte waehlen"
-        options={EurorackModule.type_options()}
+        options={@types}
         disabled={@disabled}
       />
       <.input
@@ -185,11 +325,27 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
         />
       </div>
       <div class="sm:col-span-2">
+        <div :if={@disabled} class="fieldset mb-2">
+          <span class="label mb-1">Anleitung / Produktseite (URL)</span>
+          <a
+            :if={@form[:manual_url].value not in [nil, ""]}
+            id="manual-url-link"
+            href={@form[:manual_url].value}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="link link-primary break-all"
+          >
+            {@form[:manual_url].value}
+          </a>
+          <span :if={@form[:manual_url].value in [nil, ""]} class="text-base-content/50">
+            Keine Angabe
+          </span>
+        </div>
         <.input
+          :if={!@disabled}
           field={@form[:manual_url]}
           type="text"
           label="Anleitung / Produktseite (URL)"
-          disabled={@disabled}
         />
       </div>
     </div>
