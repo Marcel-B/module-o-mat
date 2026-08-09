@@ -115,7 +115,6 @@
         <tr>
           <th>Hersteller</th>
           <th>Modul</th>
-          <th>Typ</th>
           <th>HP</th>
           <th class="text-right">Aktionen</th>
         </tr>
@@ -124,7 +123,6 @@
         <tr :for={eurorack_module <- group} id={"eurorack-module-#{eurorack_module.id}"}>
           <td>{eurorack_module.manufacturer}</td>
           <td>{eurorack_module.name}</td>
-          <td>{eurorack_module.type}</td>
           <td>{eurorack_module.hp}</td>
           <td>
             <div class="flex gap-2 justify-end">

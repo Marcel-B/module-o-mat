@@ -454,7 +454,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
       </div>
       <div class="sm:col-span-2">
         <div :if={@disabled} class="fieldset mb-2">
-          <span class="label mb-1">Anleitung / Produktseite (URL)</span>
+          <span class="label mb-1">Produktseite (URL)</span>
           <a
             :if={@form[:manual_url].value not in [nil, ""]}
             id="manual-url-link"
@@ -473,7 +473,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
           :if={!@disabled}
           field={@form[:manual_url]}
           type="text"
-          label="Anleitung / Produktseite (URL)"
+          label="Produktseite (URL)"
         />
       </div>
       <div class="sm:col-span-2">
