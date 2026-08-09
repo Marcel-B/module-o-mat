@@ -18,6 +18,12 @@ defmodule ModuleOMat.Inventory.EurorackModule do
     :description,
     :manual_url
   ]
+  @manual_fields [
+    :manual_pdf_key,
+    :manual_pdf_filename,
+    :manual_pdf_content_type,
+    :manual_pdf_size_bytes
+  ]
 
   schema "eurorack_modules" do
     field(:manufacturer, :string)
@@ -32,6 +38,11 @@ defmodule ModuleOMat.Inventory.EurorackModule do
     field(:depth_mm, :integer)
     field(:description, :string)
     field(:manual_url, :string)
+
+    field(:manual_pdf_key, :string)
+    field(:manual_pdf_filename, :string)
+    field(:manual_pdf_content_type, :string)
+    field(:manual_pdf_size_bytes, :integer)
 
     field(:deleted_at, :utc_datetime)
 
@@ -58,6 +69,11 @@ defmodule ModuleOMat.Inventory.EurorackModule do
       message: "darf nicht negativ sein"
     )
     |> validate_number(:depth_mm, greater_than_or_equal_to: 0, message: "darf nicht negativ sein")
+  end
+
+  @doc false
+  def manual_changeset(eurorack_module, attrs) do
+    cast(eurorack_module, attrs, @manual_fields)
   end
 
   defp trim(value) when is_binary(value), do: String.trim(value)

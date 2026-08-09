@@ -44,6 +44,18 @@
           <td>
             <div class="flex gap-2 justify-end">
               <.link
+                :if={eurorack_module.manual_pdf_key}
+                href={~p"/eurorack_modules/#{eurorack_module.id}/manual"}
+                id={"open-manual-pdf-#{eurorack_module.id}"}
+                class="btn btn-ghost btn-xs"
+                title="PDF oeffnen"
+                aria-label="PDF oeffnen"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <.icon name="hero-document-text" />
+              </.link>
+              <.link
                 patch={~p"/eurorack_modules/#{eurorack_module.id}"}
                 id={"show-eurorack-module-#{eurorack_module.id}"}
                 class="btn btn-ghost btn-xs"
@@ -92,6 +104,7 @@
         disabled={true}
         manufacturers={@manufacturers}
         types={@types}
+        eurorack_module={@eurorack_module}
       />
 
       <div class="flex gap-2 justify-end mt-4">
@@ -113,6 +126,8 @@
         disabled={false}
         manufacturers={@manufacturers}
         types={@types}
+        uploads={@uploads}
+        eurorack_module={@eurorack_module}
       />
 
       <div class="flex gap-2 justify-end mt-4">

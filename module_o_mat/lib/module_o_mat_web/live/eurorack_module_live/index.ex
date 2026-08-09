@@ -23,7 +23,12 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
      |> assign(:used_module_types, [])
      |> assign(:module_type_form, to_form(Inventory.change_module_type(%ModuleType{})))
      |> assign(:editing_module_type, nil)
-     |> assign(:module_type_edit_form, nil)}
+     |> assign(:module_type_edit_form, nil)
+     |> allow_upload(:manual,
+       accept: ~w(.pdf),
+       max_entries: 1,
+       max_file_size: 20_000_000
+     )}
   end
 
   @impl true
@@ -213,16 +218,55 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
     end
   end
 
-  defp save_eurorack_module(socket, :new, params) do
-    case Inventory.create_eurorack_module(params) do
+  def handle_event("cancel_manual_upload", %{"ref" => ref}, socket) do
+    {:noreply, cancel_upload(socket, :manual, ref)}
+  end
+
+  def handle_event("remove_manual", _params, socket) do
+    case Inventory.remove_manual(socket.assigns.eurorack_module) do
       {:ok, eurorack_module} ->
         {:noreply,
          socket
-         |> update(:eurorack_modules, &[eurorack_module | &1])
-         |> assign(:manufacturers, Inventory.list_manufacturers())
-         |> assign(:types, available_types())
-         |> put_flash(:info, "Modul \"#{eurorack_module.name}\" wurde gespeichert.")
-         |> push_patch(to: ~p"/")}
+         |> assign(:eurorack_module, eurorack_module)
+         |> assign(:form, to_form(Inventory.change_eurorack_module(eurorack_module)))
+         |> update(:eurorack_modules, fn modules ->
+           Enum.map(modules, fn
+             %{id: id} when id == eurorack_module.id -> eurorack_module
+             other -> other
+           end)
+         end)
+         |> put_flash(:info, "PDF-Anleitung wurde entfernt.")}
+
+      {:error, _changeset} ->
+        {:noreply, put_flash(socket, :error, "PDF-Anleitung konnte nicht entfernt werden.")}
+    end
+  end
+
+  defp save_eurorack_module(socket, :new, params) do
+    case Inventory.create_eurorack_module(params) do
+      {:ok, eurorack_module} ->
+        case maybe_attach_manual(socket, eurorack_module) do
+          {:ok, eurorack_module} ->
+            {:noreply,
+             socket
+             |> update(:eurorack_modules, &[eurorack_module | &1])
+             |> assign(:manufacturers, Inventory.list_manufacturers())
+             |> assign(:types, available_types())
+             |> put_flash(:info, "Modul \"#{eurorack_module.name}\" wurde gespeichert.")
+             |> push_patch(to: ~p"/")}
+
+          {:error, :manual_upload} ->
+            {:noreply,
+             socket
+             |> update(:eurorack_modules, &[eurorack_module | &1])
+             |> assign(:manufacturers, Inventory.list_manufacturers())
+             |> assign(:types, available_types())
+             |> put_flash(
+               :error,
+               "Modul wurde gespeichert, aber die PDF-Anleitung konnte nicht uebernommen werden."
+             )
+             |> push_patch(to: ~p"/")}
+        end
 
       {:error, changeset} ->
         {:noreply, assign(socket, :form, to_form(changeset))}
@@ -232,21 +276,63 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
   defp save_eurorack_module(socket, :edit, params) do
     case Inventory.update_eurorack_module(socket.assigns.eurorack_module, params) do
       {:ok, eurorack_module} ->
-        {:noreply,
-         socket
-         |> update(:eurorack_modules, fn modules ->
-           Enum.map(modules, fn
-             %{id: id} when id == eurorack_module.id -> eurorack_module
-             other -> other
-           end)
-         end)
-         |> assign(:manufacturers, Inventory.list_manufacturers())
-         |> assign(:types, available_types())
-         |> put_flash(:info, "Modul \"#{eurorack_module.name}\" wurde aktualisiert.")
-         |> push_patch(to: ~p"/")}
+        case maybe_attach_manual(socket, eurorack_module) do
+          {:ok, eurorack_module} ->
+            {:noreply,
+             socket
+             |> update(:eurorack_modules, fn modules ->
+               Enum.map(modules, fn
+                 %{id: id} when id == eurorack_module.id -> eurorack_module
+                 other -> other
+               end)
+             end)
+             |> assign(:manufacturers, Inventory.list_manufacturers())
+             |> assign(:types, available_types())
+             |> put_flash(:info, "Modul \"#{eurorack_module.name}\" wurde aktualisiert.")
+             |> push_patch(to: ~p"/")}
+
+          {:error, :manual_upload} ->
+            {:noreply,
+             socket
+             |> update(:eurorack_modules, fn modules ->
+               Enum.map(modules, fn
+                 %{id: id} when id == eurorack_module.id -> eurorack_module
+                 other -> other
+               end)
+             end)
+             |> assign(:manufacturers, Inventory.list_manufacturers())
+             |> assign(:types, available_types())
+             |> put_flash(
+               :error,
+               "Modul wurde aktualisiert, aber die PDF-Anleitung konnte nicht uebernommen werden."
+             )
+             |> push_patch(to: ~p"/")}
+        end
 
       {:error, changeset} ->
         {:noreply, assign(socket, :form, to_form(changeset))}
+    end
+  end
+
+  defp maybe_attach_manual(socket, eurorack_module) do
+    # Die Temp-Datei existiert nur innerhalb des Callbacks; speichern muss hier passieren.
+    results =
+      consume_uploaded_entries(socket, :manual, fn %{path: path}, entry ->
+        case Inventory.attach_manual(eurorack_module, %{
+               tmp_path: path,
+               filename: entry.client_name,
+               content_type: entry.client_type,
+               size: entry.client_size
+             }) do
+          {:ok, updated} -> {:ok, updated}
+          {:error, _changeset} -> {:ok, :manual_upload_failed}
+        end
+      end)
+
+    case results do
+      [updated] when is_struct(updated, EurorackModule) -> {:ok, updated}
+      [:manual_upload_failed] -> {:error, :manual_upload}
+      [] -> {:ok, eurorack_module}
     end
   end
 
@@ -273,6 +359,8 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
   attr :disabled, :boolean, default: false
   attr :manufacturers, :list, default: []
   attr :types, :list, default: []
+  attr :uploads, :map, default: nil
+  attr :eurorack_module, EurorackModule, default: nil
 
   defp eurorack_module_fields(assigns) do
     ~H"""
@@ -348,7 +436,137 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
           label="Anleitung / Produktseite (URL)"
         />
       </div>
+      <div class="sm:col-span-2">
+        <.manual_pdf_fields
+          form={@form}
+          disabled={@disabled}
+          uploads={@uploads}
+          eurorack_module={@eurorack_module}
+        />
+      </div>
     </div>
     """
   end
+
+  attr :form, Phoenix.HTML.Form, required: true
+  attr :disabled, :boolean, default: false
+  attr :uploads, :map, default: nil
+  attr :eurorack_module, EurorackModule, default: nil
+
+  defp manual_pdf_fields(assigns) do
+    ~H"""
+    <div id="manual-pdf-fields" class="fieldset mb-2">
+      <span class="label mb-1">PDF-Anleitung</span>
+
+      <div
+        :if={@form[:manual_pdf_key].value not in [nil, ""]}
+        id="manual-pdf-current"
+        class="flex flex-wrap items-center gap-2 mb-2"
+      >
+        <span class="text-sm">
+          {@form[:manual_pdf_filename].value}
+          <span
+            :if={@form[:manual_pdf_size_bytes].value}
+            class="text-base-content/50"
+          >
+            ({format_bytes(@form[:manual_pdf_size_bytes].value)})
+          </span>
+        </span>
+        <.link
+          :if={@eurorack_module && @eurorack_module.id}
+          href={~p"/eurorack_modules/#{@eurorack_module.id}/manual"}
+          id="open-manual-pdf-button"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="btn btn-ghost btn-xs"
+        >
+          <.icon name="hero-document-text" class="size-4" /> PDF oeffnen
+        </.link>
+        <button
+          :if={!@disabled}
+          type="button"
+          id="remove-manual-pdf-button"
+          class="btn btn-ghost btn-xs text-error"
+          phx-click="remove_manual"
+        >
+          Entfernen
+        </button>
+      </div>
+
+      <span
+        :if={@disabled and @form[:manual_pdf_key].value in [nil, ""]}
+        class="text-base-content/50"
+      >
+        Keine Anleitung hinterlegt.
+      </span>
+
+      <div :if={!@disabled && @uploads} id="manual-pdf-upload">
+        <div
+          class="border border-dashed border-base-300 rounded-lg p-4 text-center"
+          phx-drop-target={@uploads.manual.ref}
+        >
+          <p class="text-sm text-base-content/70 mb-2">
+            PDF hierher ziehen oder Datei auswaehlen
+          </p>
+          <.live_file_input
+            upload={@uploads.manual}
+            class="file-input file-input-bordered file-input-sm w-full max-w-xs"
+          />
+        </div>
+
+        <div
+          :for={entry <- @uploads.manual.entries}
+          id={"manual-upload-entry-#{entry.ref}"}
+          class="mt-2"
+        >
+          <div class="flex items-center gap-2 text-sm">
+            <span class="truncate">{entry.client_name}</span>
+            <span class="text-base-content/50">{entry.progress}%</span>
+            <button
+              type="button"
+              id={"cancel-manual-upload-#{entry.ref}"}
+              class="btn btn-ghost btn-xs"
+              phx-click="cancel_manual_upload"
+              phx-value-ref={entry.ref}
+            >
+              Abbrechen
+            </button>
+          </div>
+          <p
+            :for={err <- upload_errors(@uploads.manual, entry)}
+            class="mt-1.5 flex gap-2 items-center text-sm text-error"
+          >
+            <.icon name="hero-exclamation-circle" class="size-5" />
+            {translate_upload_error(err)}
+          </p>
+        </div>
+
+        <p
+          :for={err <- upload_errors(@uploads.manual)}
+          class="mt-1.5 flex gap-2 items-center text-sm text-error"
+        >
+          <.icon name="hero-exclamation-circle" class="size-5" />
+          {translate_upload_error(err)}
+        </p>
+      </div>
+    </div>
+    """
+  end
+
+  defp format_bytes(bytes) when is_integer(bytes) and bytes < 1024, do: "#{bytes} B"
+
+  defp format_bytes(bytes) when is_integer(bytes) and bytes < 1_048_576 do
+    "#{Float.round(bytes / 1024, 1)} KB"
+  end
+
+  defp format_bytes(bytes) when is_integer(bytes) do
+    "#{Float.round(bytes / 1_048_576, 1)} MB"
+  end
+
+  defp format_bytes(_), do: ""
+
+  defp translate_upload_error(:too_large), do: "Datei ist zu gross (max. 20 MB)"
+  defp translate_upload_error(:too_many_files), do: "Nur eine PDF-Datei erlaubt"
+  defp translate_upload_error(:not_accepted), do: "Nur PDF-Dateien sind erlaubt"
+  defp translate_upload_error(other), do: "Upload-Fehler: #{inspect(other)}"
 end

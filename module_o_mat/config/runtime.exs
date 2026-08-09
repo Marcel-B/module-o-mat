@@ -23,6 +23,10 @@ end
 config :module_o_mat, ModuleOMatWeb.Endpoint,
   http: [port: String.to_integer(System.get_env("PORT", "4000"))]
 
+if manual_uploads_dir = System.get_env("MANUAL_UPLOADS_DIR") do
+  config :module_o_mat, :manual_uploads_dir, manual_uploads_dir
+end
+
 if config_env() == :dev do
   # Reload browser tabs when matching files change.
   config :module_o_mat, ModuleOMatWeb.Endpoint,

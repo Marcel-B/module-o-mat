@@ -506,6 +506,104 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
     end
   end
 
+  describe "PDF-Anleitung" do
+    @fixture Path.expand("../../../support/fixtures/files/sample.pdf", __DIR__)
+
+    test "zeigt den PDF-Button in der Tabelle nur bei vorhandener Anleitung", %{conn: conn} do
+      without = eurorack_module_fixture(%{name: "Ohne PDF"})
+      with_manual = eurorack_module_fixture(%{name: "Mit PDF"})
+
+      assert {:ok, with_manual} =
+               Inventory.attach_manual(with_manual, %{
+                 tmp_path: @fixture,
+                 filename: "sample.pdf",
+                 content_type: "application/pdf",
+                 size: File.stat!(@fixture).size
+               })
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      refute has_element?(view, "#open-manual-pdf-#{without.id}")
+      assert has_element?(view, "#open-manual-pdf-#{with_manual.id}")
+    end
+
+    test "laedt beim Anlegen eine PDF-Anleitung hoch", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/eurorack_modules/new")
+
+      manual =
+        file_input(view, "#eurorack-module-form", :manual, [
+          %{
+            name: "maths.pdf",
+            content: File.read!(@fixture),
+            type: "application/pdf"
+          }
+        ])
+
+      assert render_upload(manual, "maths.pdf") =~ "maths.pdf"
+
+      view
+      |> form("#eurorack-module-form",
+        eurorack_module: %{
+          "manufacturer" => "Make Noise",
+          "name" => "Maths",
+          "hp" => "20",
+          "type" => "Envelope"
+        }
+      )
+      |> render_submit()
+
+      assert_patch(view, ~p"/")
+
+      assert [eurorack_module] = Inventory.list_eurorack_modules()
+      assert eurorack_module.manual_pdf_filename == "maths.pdf"
+      assert eurorack_module.manual_pdf_key
+      assert has_element?(view, "#open-manual-pdf-#{eurorack_module.id}")
+    end
+
+    test "zeigt und entfernt eine vorhandene PDF-Anleitung im Bearbeiten-Dialog", %{conn: conn} do
+      eurorack_module = eurorack_module_fixture()
+
+      assert {:ok, eurorack_module} =
+               Inventory.attach_manual(eurorack_module, %{
+                 tmp_path: @fixture,
+                 filename: "sample.pdf",
+                 content_type: "application/pdf",
+                 size: File.stat!(@fixture).size
+               })
+
+      {:ok, view, _html} = live(conn, ~p"/eurorack_modules/#{eurorack_module.id}/edit")
+
+      assert has_element?(view, "#manual-pdf-current", "sample.pdf")
+      assert has_element?(view, "#open-manual-pdf-button")
+
+      view
+      |> element("#remove-manual-pdf-button")
+      |> render_click()
+
+      refute has_element?(view, "#manual-pdf-current")
+      assert Inventory.get_eurorack_module!(eurorack_module.id).manual_pdf_key == nil
+    end
+
+    test "zeigt die PDF-Anleitung im Anzeige-Dialog", %{conn: conn} do
+      eurorack_module = eurorack_module_fixture()
+
+      assert {:ok, eurorack_module} =
+               Inventory.attach_manual(eurorack_module, %{
+                 tmp_path: @fixture,
+                 filename: "sample.pdf",
+                 content_type: "application/pdf",
+                 size: File.stat!(@fixture).size
+               })
+
+      {:ok, view, _html} = live(conn, ~p"/eurorack_modules/#{eurorack_module.id}")
+
+      assert has_element?(view, "#manual-pdf-current", "sample.pdf")
+      assert has_element?(view, "#open-manual-pdf-button")
+      refute has_element?(view, "#remove-manual-pdf-button")
+      refute has_element?(view, "#manual-pdf-upload")
+    end
+  end
+
   defp module_type_id(name) do
     Inventory.list_module_type_records()
     |> Enum.find(&(&1.name == name))

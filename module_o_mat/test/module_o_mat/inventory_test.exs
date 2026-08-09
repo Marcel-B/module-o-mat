@@ -313,6 +313,25 @@ defmodule ModuleOMat.InventoryTest do
         Inventory.get_eurorack_module!(eurorack_module.id)
       end
     end
+
+    test "entfernt eine vorhandene PDF-Anleitung vom Storage" do
+      eurorack_module = eurorack_module_fixture()
+      fixture = Path.expand("../support/fixtures/files/sample.pdf", __DIR__)
+
+      assert {:ok, with_manual} =
+               Inventory.attach_manual(eurorack_module, %{
+                 tmp_path: fixture,
+                 filename: "sample.pdf",
+                 content_type: "application/pdf",
+                 size: File.stat!(fixture).size
+               })
+
+      path = ModuleOMat.Inventory.ManualStorage.LocalDisk.path_for(with_manual.manual_pdf_key)
+      assert File.exists?(path)
+
+      assert {:ok, _} = Inventory.delete_eurorack_module(with_manual)
+      refute File.exists?(path)
+    end
   end
 
   describe "soft_delete_eurorack_module/1" do
@@ -324,6 +343,104 @@ defmodule ModuleOMat.InventoryTest do
 
       assert %DateTime{} = deleted.deleted_at
       assert Inventory.get_eurorack_module!(eurorack_module.id).deleted_at != nil
+    end
+
+    test "behaelt eine vorhandene PDF-Anleitung" do
+      eurorack_module = eurorack_module_fixture()
+      fixture = Path.expand("../support/fixtures/files/sample.pdf", __DIR__)
+
+      assert {:ok, with_manual} =
+               Inventory.attach_manual(eurorack_module, %{
+                 tmp_path: fixture,
+                 filename: "sample.pdf",
+                 content_type: "application/pdf",
+                 size: File.stat!(fixture).size
+               })
+
+      path = ModuleOMat.Inventory.ManualStorage.LocalDisk.path_for(with_manual.manual_pdf_key)
+
+      assert {:ok, _} = Inventory.soft_delete_eurorack_module(with_manual)
+      assert File.exists?(path)
+    end
+  end
+
+  describe "attach_manual/2" do
+    @fixture Path.expand("../support/fixtures/files/sample.pdf", __DIR__)
+
+    test "speichert PDF und setzt Metadaten" do
+      eurorack_module = eurorack_module_fixture()
+
+      assert {:ok, updated} =
+               Inventory.attach_manual(eurorack_module, %{
+                 tmp_path: @fixture,
+                 filename: "maths.pdf",
+                 content_type: "application/pdf",
+                 size: 1234
+               })
+
+      assert updated.manual_pdf_key
+      assert updated.manual_pdf_filename == "maths.pdf"
+      assert updated.manual_pdf_content_type == "application/pdf"
+      assert updated.manual_pdf_size_bytes == 1234
+
+      assert File.exists?(
+               ModuleOMat.Inventory.ManualStorage.LocalDisk.path_for(updated.manual_pdf_key)
+             )
+    end
+
+    test "ersetzt eine vorhandene Anleitung und loescht die alte Datei" do
+      eurorack_module = eurorack_module_fixture()
+
+      assert {:ok, first} =
+               Inventory.attach_manual(eurorack_module, %{
+                 tmp_path: @fixture,
+                 filename: "old.pdf",
+                 content_type: "application/pdf",
+                 size: 100
+               })
+
+      old_key = first.manual_pdf_key
+      old_path = ModuleOMat.Inventory.ManualStorage.LocalDisk.path_for(old_key)
+
+      assert {:ok, second} =
+               Inventory.attach_manual(first, %{
+                 tmp_path: @fixture,
+                 filename: "new.pdf",
+                 content_type: "application/pdf",
+                 size: 200
+               })
+
+      assert second.manual_pdf_key != old_key
+      assert second.manual_pdf_filename == "new.pdf"
+      refute File.exists?(old_path)
+
+      assert File.exists?(
+               ModuleOMat.Inventory.ManualStorage.LocalDisk.path_for(second.manual_pdf_key)
+             )
+    end
+  end
+
+  describe "remove_manual/1" do
+    test "entfernt Metadaten und Datei" do
+      eurorack_module = eurorack_module_fixture()
+      fixture = Path.expand("../support/fixtures/files/sample.pdf", __DIR__)
+
+      assert {:ok, with_manual} =
+               Inventory.attach_manual(eurorack_module, %{
+                 tmp_path: fixture,
+                 filename: "sample.pdf",
+                 content_type: "application/pdf",
+                 size: File.stat!(fixture).size
+               })
+
+      path = ModuleOMat.Inventory.ManualStorage.LocalDisk.path_for(with_manual.manual_pdf_key)
+
+      assert {:ok, cleared} = Inventory.remove_manual(with_manual)
+      assert cleared.manual_pdf_key == nil
+      assert cleared.manual_pdf_filename == nil
+      assert cleared.manual_pdf_content_type == nil
+      assert cleared.manual_pdf_size_bytes == nil
+      refute File.exists?(path)
     end
   end
 

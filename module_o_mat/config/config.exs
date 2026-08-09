@@ -2,7 +2,8 @@ import Config
 
 config :module_o_mat,
   ecto_repos: [ModuleOMat.Repo],
-  generators: [timestamp_type: :utc_datetime]
+  generators: [timestamp_type: :utc_datetime],
+  manual_storage_adapter: ModuleOMat.Inventory.ManualStorage.LocalDisk
 
 # Configure the endpoint
 config :module_o_mat, ModuleOMatWeb.Endpoint,
