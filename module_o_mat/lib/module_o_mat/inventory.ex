@@ -12,10 +12,12 @@ defmodule ModuleOMat.Inventory do
   alias ModuleOMat.Inventory.EurorackModule
 
   @doc """
-  Liefert alle erfassten Eurorack-Module.
+  Liefert alle erfassten Eurorack-Module, sortiert nach Typ und Hersteller.
   """
   def list_eurorack_modules do
-    Repo.all(EurorackModule)
+    EurorackModule
+    |> order_by([m], asc: m.type, asc: m.manufacturer)
+    |> Repo.all()
   end
 
   @doc """

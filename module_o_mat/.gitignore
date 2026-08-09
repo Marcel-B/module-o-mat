@@ -22,6 +22,19 @@ erl_crash.dump
 # Ignore package tarball (built via "mix hex.build").
 module_o_mat-*.tar
 
+# Ignore .fetch files in case you like to edit your project deps locally.
+/.fetch
+
+# Ignore assets that are produced by build tools.
+/priv/static/assets/
+
+# Ignore digested assets cache.
+/priv/static/cache_manifest.json
+
+# In case you use Node.js/npm, you want to ignore these.
+npm-debug.log
+/assets/node_modules/
+
 # SQLite database files (dev/test) and their WAL/SHM sidecar files.
 *.db
 *.db-shm
