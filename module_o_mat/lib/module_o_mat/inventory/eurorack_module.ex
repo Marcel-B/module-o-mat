@@ -13,6 +13,7 @@ defmodule ModuleOMat.Inventory.EurorackModule do
 
   @required_fields [:manufacturer, :name, :hp, :type]
   @optional_fields [
+    :subtypes,
     :current_draw_plus12v_ma,
     :current_draw_minus12v_ma,
     :current_draw_plus5v_ma,
@@ -32,6 +33,7 @@ defmodule ModuleOMat.Inventory.EurorackModule do
     field(:name, :string)
     field(:hp, :integer)
     field(:type, :string)
+    field(:subtypes, {:array, :string}, default: [])
 
     field(:current_draw_plus12v_ma, :integer)
     field(:current_draw_minus12v_ma, :integer)
@@ -63,7 +65,9 @@ defmodule ModuleOMat.Inventory.EurorackModule do
     eurorack_module
     |> cast(attrs, @required_fields ++ @optional_fields)
     |> update_change(:type, &trim/1)
+    |> update_change(:subtypes, &normalize_subtypes/1)
     |> validate_required(@required_fields, message: "muss ausgefuellt werden")
+    |> exclude_haupttyp_from_subtypes()
     |> validate_number(:hp, greater_than: 0, message: "muss groesser als 0 sein")
     |> validate_number(:current_draw_plus12v_ma,
       greater_than_or_equal_to: 0,
@@ -166,4 +170,32 @@ defmodule ModuleOMat.Inventory.EurorackModule do
 
   defp trim(value) when is_binary(value), do: String.trim(value)
   defp trim(value), do: value
+
+  defp normalize_subtypes(nil), do: []
+  defp normalize_subtypes(subtype) when is_binary(subtype), do: normalize_subtypes([subtype])
+
+  defp normalize_subtypes(subtypes) when is_list(subtypes) do
+    subtypes
+    |> Enum.map(&trim_subtype/1)
+    |> Enum.reject(&(&1 in [nil, ""]))
+    |> Enum.uniq()
+  end
+
+  defp normalize_subtypes(_), do: []
+
+  defp trim_subtype(value) when is_binary(value), do: String.trim(value)
+  defp trim_subtype(_), do: nil
+
+  defp exclude_haupttyp_from_subtypes(changeset) do
+    type = get_field(changeset, :type)
+    subtypes = get_field(changeset, :subtypes) || []
+
+    cleaned = Enum.reject(subtypes, &(&1 == type))
+
+    if cleaned == subtypes do
+      changeset
+    else
+      put_change(changeset, :subtypes, cleaned)
+    end
+  end
 end

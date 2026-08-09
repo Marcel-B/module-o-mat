@@ -114,6 +114,30 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
       refute has_element?(view, "#eurorack-module-#{other_maker.id}")
     end
 
+    test "zeigt Module im Typfilter auch bei Subtyp-Match", %{conn: conn} do
+      plaits =
+        eurorack_module_fixture(%{
+          manufacturer: "Mutable Instruments",
+          name: "Plaits",
+          type: "VCO",
+          subtypes: ["LFO"]
+        })
+
+      envelope = eurorack_module_fixture(%{type: "Envelope"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      assert has_element?(view, "#module-type-filter option", "LFO")
+
+      view
+      |> form("#module-filter-form", %{"type" => "LFO"})
+      |> render_change()
+
+      assert has_element?(view, "#eurorack-module-#{plaits.id}")
+      refute has_element?(view, "#eurorack-module-#{envelope.id}")
+      assert has_element?(view, "#eurorack-modules-VCO")
+    end
+
     test "filtert nach HP-Bereich", %{conn: conn} do
       mid = eurorack_module_fixture(%{name: "Mid", hp: 8})
       wide = eurorack_module_fixture(%{name: "Wide", hp: 16})
@@ -224,6 +248,36 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
       assert eurorack_module.name == "Maths"
 
       assert has_element?(view, "#eurorack-module-#{eurorack_module.id}")
+    end
+
+    test "speichert gewaehlte Subtypen mit dem Modul", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/eurorack_modules/new")
+
+      view
+      |> form("#eurorack-module-form",
+        eurorack_module: %{
+          "manufacturer" => "Mutable Instruments",
+          "name" => "Plaits",
+          "hp" => "12",
+          "type" => "VCO"
+        }
+      )
+      |> render_change()
+
+      assert has_element?(view, "#subtype-chip-LFO")
+
+      view
+      |> element("#subtype-chip-LFO")
+      |> render_click()
+
+      view
+      |> form("#eurorack-module-form")
+      |> render_submit()
+
+      assert_patch(view, ~p"/")
+      assert [eurorack_module] = Inventory.list_eurorack_modules()
+      assert eurorack_module.type == "VCO"
+      assert eurorack_module.subtypes == ["LFO"]
     end
 
     test "schlaegt bereits erfasste Herstellernamen als Autocomplete-Optionen vor", %{

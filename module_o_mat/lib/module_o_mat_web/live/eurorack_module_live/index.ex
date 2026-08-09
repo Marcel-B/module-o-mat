@@ -98,6 +98,8 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
   end
 
   def handle_event("validate", %{"eurorack_module" => params}, socket) do
+    params = ensure_subtypes_param(params)
+
     form =
       socket.assigns.eurorack_module
       |> Inventory.change_eurorack_module(params)
@@ -107,8 +109,21 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
     {:noreply, assign(socket, :form, form)}
   end
 
+  def handle_event("toggle_subtype", %{"type" => type}, socket) do
+    type = String.trim(type)
+
+    {:noreply,
+     update_form_subtypes(socket, fn subtypes ->
+       if type in subtypes do
+         List.delete(subtypes, type)
+       else
+         Enum.uniq(subtypes ++ [type])
+       end
+     end)}
+  end
+
   def handle_event("save", %{"eurorack_module" => params}, socket) do
-    save_eurorack_module(socket, socket.assigns.live_action, params)
+    save_eurorack_module(socket, socket.assigns.live_action, ensure_subtypes_param(params))
   end
 
   def handle_event("validate_module_type", %{"module_type" => params}, socket) do
@@ -437,6 +452,39 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
     assign(socket, :form, form)
   end
 
+  defp update_form_subtypes(socket, fun) do
+    form = socket.assigns.form
+    subtypes = form |> form_subtypes() |> fun.()
+    params = form |> module_form_params() |> Map.put("subtypes", subtypes)
+
+    form =
+      socket.assigns.eurorack_module
+      |> Inventory.change_eurorack_module(params)
+      |> Map.put(:action, :validate)
+      |> to_form()
+
+    assign(socket, :form, form)
+  end
+
+  defp ensure_subtypes_param(params) when is_map(params) do
+    Map.put_new(params, "subtypes", [])
+  end
+
+  defp form_subtypes(form) do
+    cond do
+      is_list(form.params["subtypes"]) ->
+        form.params["subtypes"]
+
+      true ->
+        Ecto.Changeset.get_field(form.source, :subtypes) || []
+    end
+    |> List.wrap()
+    |> Enum.map(&to_string/1)
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(&(&1 == ""))
+    |> Enum.uniq()
+  end
+
   defp module_form_params(form) do
     fields = [
       "manufacturer",
@@ -451,9 +499,12 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
       "manual_url"
     ]
 
-    Enum.reduce(fields, %{}, fn field, acc ->
-      Map.put(acc, field, form_field_param(form, field))
-    end)
+    params =
+      Enum.reduce(fields, %{}, fn field, acc ->
+        Map.put(acc, field, form_field_param(form, field))
+      end)
+
+    Map.put(params, "subtypes", form_subtypes(form))
   end
 
   defp form_field_param(%{params: params}, field) when is_map_key(params, field) do
@@ -533,6 +584,15 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
   attr :eurorack_module, EurorackModule, default: nil
 
   defp eurorack_module_fields(assigns) do
+    subtypes = form_subtypes(assigns.form)
+    haupttyp = form_field_param(assigns.form, "type")
+    subtype_options = Enum.reject(assigns.types, &(&1 == haupttyp))
+
+    assigns =
+      assigns
+      |> assign(:subtypes, subtypes)
+      |> assign(:subtype_options, subtype_options)
+
     ~H"""
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
       <.input
@@ -555,6 +615,53 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
         options={@types}
         disabled={@disabled}
       />
+      <div class="sm:col-span-2 fieldset mb-2" id="module-subtypes">
+        <span class="label mb-1">Subtypen</span>
+        <input
+          :for={subtype <- @subtypes}
+          type="hidden"
+          name="eurorack_module[subtypes][]"
+          value={subtype}
+        />
+        <div :if={@subtype_options == []} class="text-base-content/50 text-sm">
+          Keine weiteren Typen verfuegbar.
+        </div>
+        <div :if={@subtype_options != []} class="flex flex-wrap gap-1.5">
+          <%= for type <- @subtype_options do %>
+            <% selected? = type in @subtypes %>
+            <%= if @disabled do %>
+              <span
+                :if={selected?}
+                id={"subtype-chip-#{type}"}
+                class="badge badge-primary badge-sm"
+              >
+                {type}
+              </span>
+            <% else %>
+              <button
+                type="button"
+                id={"subtype-chip-#{type}"}
+                phx-click="toggle_subtype"
+                phx-value-type={type}
+                class={[
+                  "badge badge-sm transition-colors",
+                  selected? && "badge-primary",
+                  !selected? && "badge-outline hover:badge-primary"
+                ]}
+              >
+                {type}
+              </button>
+            <% end %>
+          <% end %>
+        </div>
+        <p
+          :if={@disabled and @subtypes == []}
+          class="text-base-content/50 text-sm"
+          id="module-subtypes-empty"
+        >
+          Keine Subtypen
+        </p>
+      </div>
       <.input
         field={@form[:current_draw_plus12v_ma]}
         type="number"

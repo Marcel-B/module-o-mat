@@ -59,6 +59,13 @@ defmodule ModuleOMat.InventoryTest do
       assert {:ok, %EurorackModule{type: "VCO"}} = Inventory.create_eurorack_module(attrs)
     end
 
+    test "speichert Subtypen und entfernt den Haupttyp aus der Liste" do
+      attrs = valid_eurorack_module_attrs(%{type: "VCO", subtypes: ["LFO", "VCO", "  LFO  ", ""]})
+
+      assert {:ok, %EurorackModule{type: "VCO", subtypes: ["LFO"]}} =
+               Inventory.create_eurorack_module(attrs)
+    end
+
     test "liefert einen Fehler, wenn der Typ nur aus Leerzeichen besteht" do
       attrs = valid_eurorack_module_attrs(%{type: "   "})
 
@@ -265,6 +272,22 @@ defmodule ModuleOMat.InventoryTest do
       assert ids == [sequencer.id]
     end
 
+    test "findet Module auch ueber Subtypen" do
+      vco_lfo =
+        eurorack_module_fixture(%{
+          manufacturer: "Mutable Instruments",
+          name: "Plaits",
+          type: "VCO",
+          subtypes: ["LFO"]
+        })
+
+      _other = eurorack_module_fixture(%{type: "Envelope"})
+
+      ids = Inventory.list_eurorack_modules(types: ["LFO"]) |> Enum.map(& &1.id)
+
+      assert ids == [vco_lfo.id]
+    end
+
     test "kombiniert Suche und Typfilter per AND" do
       matching =
         eurorack_module_fixture(%{
@@ -326,6 +349,12 @@ defmodule ModuleOMat.InventoryTest do
       eurorack_module_fixture(%{type: "Envelope"})
 
       assert Inventory.list_used_types() == ["Envelope", "VCO"]
+    end
+
+    test "beruecksichtigt auch Subtypen" do
+      eurorack_module_fixture(%{type: "VCO", subtypes: ["LFO"]})
+
+      assert Inventory.list_used_types() == ["LFO", "VCO"]
     end
 
     test "liefert eine leere Liste, wenn keine Module existieren" do
@@ -406,6 +435,21 @@ defmodule ModuleOMat.InventoryTest do
       assert Inventory.get_eurorack_module!(eurorack_module.id).type == "Granularsynthese"
     end
 
+    test "benennt Subtypen in referenzierenden Modulen um" do
+      module_type = module_type_fixture(%{name: "Granular"})
+
+      eurorack_module =
+        eurorack_module_fixture(%{type: "VCO", subtypes: ["Granular", "Envelope"]})
+
+      assert {:ok, _updated} =
+               Inventory.update_module_type(module_type, %{name: "Granularsynthese"})
+
+      assert Inventory.get_eurorack_module!(eurorack_module.id).subtypes == [
+               "Granularsynthese",
+               "Envelope"
+             ]
+    end
+
     test "liefert einen Fehler, wenn der neue Name bereits existiert" do
       module_type_fixture(%{name: "Granular"})
       module_type = module_type_fixture(%{name: "Wavetable"})
@@ -437,6 +481,17 @@ defmodule ModuleOMat.InventoryTest do
 
       assert Inventory.get_eurorack_module!(eurorack_module.id).type ==
                Inventory.fallback_type_name()
+    end
+
+    test "entfernt den geloeschten Typ aus Subtypen-Listen" do
+      module_type = module_type_fixture(%{name: "Granular"})
+
+      eurorack_module =
+        eurorack_module_fixture(%{type: "VCO", subtypes: ["Granular", "Envelope"]})
+
+      assert {:ok, _deleted} = Inventory.delete_module_type(module_type)
+
+      assert Inventory.get_eurorack_module!(eurorack_module.id).subtypes == ["Envelope"]
     end
 
     test "verweigert das Loeschen des Fallback-Typs" do
