@@ -1,22 +1,107 @@
 <Layouts.app flash={@flash}>
-  <.header>
-    Eurorack-Module
-    <:actions>
-      <.link patch={~p"/module_types"} id="manage-module-types-button" class="btn">
-        Typen verwalten
-      </.link>
-      <.link
-        patch={~p"/eurorack_modules/new"}
-        id="new-eurorack-module-button"
-        class="btn btn-primary"
-      >
-        Neues Modul
-      </.link>
-    </:actions>
-  </.header>
+  <div class="pb-4 space-y-3">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <h1 class="text-lg font-semibold leading-8 text-left">
+        Eurorack-Module
+      </h1>
 
-  <p :if={@eurorack_modules == []} id="no-eurorack-modules" class="text-base-content/70">
+      <div class="flex flex-none gap-2">
+        <.link patch={~p"/module_types"} id="manage-module-types-button" class="btn">
+          Typen verwalten
+        </.link>
+        <.link
+          patch={~p"/eurorack_modules/new"}
+          id="new-eurorack-module-button"
+          class="btn btn-primary"
+        >
+          Neues Modul
+        </.link>
+      </div>
+    </div>
+
+    <.form
+      for={@filter_form}
+      id="module-filter-form"
+      phx-change="filter"
+      class="flex w-full flex-col gap-2 sm:flex-row sm:items-end"
+    >
+      <div class="min-w-0 grow">
+        <.input
+          field={@filter_form[:q]}
+          type="search"
+          id="module-search-input"
+          label="Suche"
+          placeholder="Hersteller oder Modul suchen…"
+          phx-debounce="300"
+        />
+      </div>
+
+      <div class="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row sm:items-end">
+        <div class="w-full sm:w-48">
+          <.input
+            field={@filter_form[:type]}
+            type="select"
+            id="module-type-filter"
+            label="Typ"
+            prompt="Alle Typen"
+            options={Enum.map(@filter_types, &{&1, &1})}
+          />
+        </div>
+
+        <div class="w-full sm:w-16">
+          <.input
+            field={@filter_form[:min_hp]}
+            type="number"
+            id="module-min-hp"
+            label="Min HP"
+            min="1"
+            phx-debounce="300"
+          />
+        </div>
+
+        <div class="w-full sm:w-16">
+          <.input
+            field={@filter_form[:max_hp]}
+            type="number"
+            id="module-max-hp"
+            label="Max HP"
+            min="1"
+            phx-debounce="300"
+          />
+        </div>
+
+        <div class="fieldset mb-2 w-auto shrink-0">
+          <label>
+            <span class="label mb-1 invisible select-none" aria-hidden="true">&nbsp;</span>
+            <button
+              type="button"
+              id="clear-filters-button"
+              phx-click="clear_filters"
+              class="btn btn-square"
+              aria-label="Filter und Suche leeren"
+            >
+              <.icon name="hero-x-mark" class="size-5" />
+            </button>
+          </label>
+        </div>
+      </div>
+    </.form>
+  </div>
+
+  <p
+    :if={@eurorack_modules == [] and not @filters_active?}
+    id="no-eurorack-modules"
+    class="text-base-content/70"
+  >
     Es sind noch keine Module erfasst.
+  </p>
+
+  <p
+    :if={@eurorack_modules == [] and @filters_active?}
+    id="no-search-results"
+    class="text-base-content/70"
+  >
+    Keine Module gefunden.
   </p>
 
   <div :for={group <- grouped_eurorack_modules(@eurorack_modules)} class="mb-8">

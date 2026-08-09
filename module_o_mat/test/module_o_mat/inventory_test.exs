@@ -122,6 +122,121 @@ defmodule ModuleOMat.InventoryTest do
     end
   end
 
+  describe "list_eurorack_modules/1" do
+    test "findet Module anhand des Herstellers" do
+      matching = eurorack_module_fixture(%{manufacturer: "Make Noise", name: "Maths"})
+      _other = eurorack_module_fixture(%{manufacturer: "Doepfer", name: "A-140"})
+
+      ids = Inventory.list_eurorack_modules("make") |> Enum.map(& &1.id)
+
+      assert ids == [matching.id]
+    end
+
+    test "findet Module anhand des Namens" do
+      matching = eurorack_module_fixture(%{manufacturer: "Mutable Instruments", name: "Plaits"})
+      _other = eurorack_module_fixture(%{manufacturer: "Make Noise", name: "Maths"})
+
+      ids = Inventory.list_eurorack_modules("plai") |> Enum.map(& &1.id)
+
+      assert ids == [matching.id]
+    end
+
+    test "liefert alle Module bei leerem Query" do
+      module_1 = eurorack_module_fixture(%{name: "Maths"})
+      module_2 = eurorack_module_fixture(%{name: "Plaits", manufacturer: "Mutable Instruments"})
+
+      ids = Inventory.list_eurorack_modules("  ") |> Enum.map(& &1.id)
+
+      assert module_1.id in ids
+      assert module_2.id in ids
+      assert length(ids) == 2
+    end
+
+    test "enthaelt keine als geloescht markierten Module" do
+      sichtbares_modul = eurorack_module_fixture(%{name: "Maths"})
+      geloeschtes_modul = eurorack_module_fixture(%{name: "Maths Deluxe"})
+
+      {:ok, _} = Inventory.soft_delete_eurorack_module(geloeschtes_modul)
+
+      ids = Inventory.list_eurorack_modules("Maths") |> Enum.map(& &1.id)
+
+      assert ids == [sichtbares_modul.id]
+    end
+
+    test "filtert nach Typ" do
+      sequencer =
+        eurorack_module_fixture(%{
+          manufacturer: "Erica Synths",
+          name: "Black Sequencer",
+          type: "Sequencer"
+        })
+
+      _vco =
+        eurorack_module_fixture(%{
+          manufacturer: "Erica Synths",
+          name: "Black VCO",
+          type: "VCO"
+        })
+
+      ids = Inventory.list_eurorack_modules(types: ["Sequencer"]) |> Enum.map(& &1.id)
+
+      assert ids == [sequencer.id]
+    end
+
+    test "kombiniert Suche und Typfilter per AND" do
+      matching =
+        eurorack_module_fixture(%{
+          manufacturer: "Erica Synths",
+          name: "Black Sequencer",
+          type: "Sequencer"
+        })
+
+      _other_erica =
+        eurorack_module_fixture(%{
+          manufacturer: "Erica Synths",
+          name: "Black VCO",
+          type: "VCO"
+        })
+
+      _other_sequencer =
+        eurorack_module_fixture(%{
+          manufacturer: "Make Noise",
+          name: "René",
+          type: "Sequencer"
+        })
+
+      ids =
+        Inventory.list_eurorack_modules(q: "Erica", types: ["Sequencer"])
+        |> Enum.map(& &1.id)
+
+      assert ids == [matching.id]
+    end
+
+    test "filtert nach min und max HP" do
+      narrow = eurorack_module_fixture(%{name: "Narrow", hp: 4})
+      mid = eurorack_module_fixture(%{name: "Mid", hp: 8})
+      wide = eurorack_module_fixture(%{name: "Wide", hp: 16})
+
+      ids =
+        Inventory.list_eurorack_modules(min_hp: 6, max_hp: 12)
+        |> Enum.map(& &1.id)
+
+      assert ids == [mid.id]
+      refute narrow.id in ids
+      refute wide.id in ids
+    end
+
+    test "ignoriert ungueltige HP-Werte" do
+      module = eurorack_module_fixture(%{name: "Maths", hp: 20})
+
+      ids =
+        Inventory.list_eurorack_modules(min_hp: "abc", max_hp: "-3")
+        |> Enum.map(& &1.id)
+
+      assert module.id in ids
+    end
+  end
+
   describe "list_used_types/0" do
     test "liefert alle bereits an Modulen verwendeten Typen ohne Duplikate, sortiert" do
       eurorack_module_fixture(%{type: "VCO"})

@@ -36,6 +36,136 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
       assert make_noise_at < mutable_at,
              "Innerhalb der VCO-Gruppe sollte \"Make Noise\" vor \"Mutable Instruments\" stehen"
     end
+
+    test "zeigt Filterfelder an", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      assert has_element?(view, "#module-filter-form")
+      assert has_element?(view, "#module-search-input")
+      assert has_element?(view, "#module-type-filter")
+      assert has_element?(view, "#module-min-hp")
+      assert has_element?(view, "#module-max-hp")
+      assert has_element?(view, "#clear-filters-button")
+    end
+
+    test "bietet im Typfilter nur Typen an, die an Modulen vorkommen", %{conn: conn} do
+      eurorack_module_fixture(%{type: "VCO"})
+      eurorack_module_fixture(%{type: "Envelope"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      assert has_element?(view, "#module-type-filter option", "VCO")
+      assert has_element?(view, "#module-type-filter option", "Envelope")
+      refute has_element?(view, "#module-type-filter option", "Sequencer")
+    end
+
+    test "filtert die Tabelle nach Hersteller oder Modulname", %{conn: conn} do
+      maths =
+        eurorack_module_fixture(%{manufacturer: "Make Noise", name: "Maths", type: "Envelope"})
+
+      plaits =
+        eurorack_module_fixture(%{
+          manufacturer: "Mutable Instruments",
+          name: "Plaits",
+          type: "VCO"
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      view
+      |> form("#module-filter-form", %{"q" => "Make"})
+      |> render_change()
+
+      assert has_element?(view, "#eurorack-module-#{maths.id}")
+      refute has_element?(view, "#eurorack-module-#{plaits.id}")
+    end
+
+    test "filtert kombiniert nach Suche und Typ", %{conn: conn} do
+      matching =
+        eurorack_module_fixture(%{
+          manufacturer: "Erica Synths",
+          name: "Black Sequencer",
+          type: "Sequencer"
+        })
+
+      other_type =
+        eurorack_module_fixture(%{
+          manufacturer: "Erica Synths",
+          name: "Black VCO",
+          type: "VCO"
+        })
+
+      other_maker =
+        eurorack_module_fixture(%{
+          manufacturer: "Make Noise",
+          name: "René",
+          type: "Sequencer"
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      view
+      |> form("#module-filter-form", %{"q" => "Erica", "type" => "Sequencer"})
+      |> render_change()
+
+      assert has_element?(view, "#eurorack-module-#{matching.id}")
+      refute has_element?(view, "#eurorack-module-#{other_type.id}")
+      refute has_element?(view, "#eurorack-module-#{other_maker.id}")
+    end
+
+    test "filtert nach HP-Bereich", %{conn: conn} do
+      mid = eurorack_module_fixture(%{name: "Mid", hp: 8})
+      wide = eurorack_module_fixture(%{name: "Wide", hp: 16})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      view
+      |> form("#module-filter-form", %{"min_hp" => "6", "max_hp" => "12"})
+      |> render_change()
+
+      assert has_element?(view, "#eurorack-module-#{mid.id}")
+      refute has_element?(view, "#eurorack-module-#{wide.id}")
+    end
+
+    test "leert Filter und Suche ueber den Clear-Button", %{conn: conn} do
+      maths =
+        eurorack_module_fixture(%{manufacturer: "Make Noise", name: "Maths", type: "Envelope"})
+
+      plaits =
+        eurorack_module_fixture(%{
+          manufacturer: "Mutable Instruments",
+          name: "Plaits",
+          type: "VCO"
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      view
+      |> form("#module-filter-form", %{"q" => "Make"})
+      |> render_change()
+
+      refute has_element?(view, "#eurorack-module-#{plaits.id}")
+
+      view
+      |> element("#clear-filters-button")
+      |> render_click()
+
+      assert has_element?(view, "#eurorack-module-#{maths.id}")
+      assert has_element?(view, "#eurorack-module-#{plaits.id}")
+    end
+
+    test "zeigt einen Hinweis an, wenn die Suche keine Treffer liefert", %{conn: conn} do
+      eurorack_module_fixture(%{manufacturer: "Make Noise", name: "Maths"})
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      view
+      |> form("#module-filter-form", %{"q" => "xyz-nicht-vorhanden"})
+      |> render_change()
+
+      assert has_element?(view, "#no-search-results")
+      refute has_element?(view, "#no-eurorack-modules")
+    end
   end
 
   describe "Neues Modul anlegen" do
