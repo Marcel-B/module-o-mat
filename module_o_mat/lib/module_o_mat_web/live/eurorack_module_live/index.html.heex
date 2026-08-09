@@ -138,6 +138,7 @@
               >
                 <.icon name="hero-document-text" />
               </.link>
+              <.youtube_play_button eurorack_module={eurorack_module} />
               <.link
                 patch={~p"/eurorack_modules/#{eurorack_module.id}"}
                 id={"show-eurorack-module-#{eurorack_module.id}"}
@@ -173,6 +174,78 @@
       </tbody>
     </table>
   </div>
+
+  <script :type={Phoenix.LiveView.ColocatedHook} name=".YoutubePreview">
+    export default {
+      mounted() {
+        this.overlay = null
+
+        this.hide = () => {
+          if (this.overlay) {
+            this.overlay.remove()
+            this.overlay = null
+          }
+        }
+
+        this.show = () => {
+          const embedUrl = this.el.dataset.embedUrl
+          if (!embedUrl) return
+
+          this.hide()
+
+          const overlay = document.createElement("div")
+          overlay.id = `youtube-preview-${this.el.id}`
+          overlay.setAttribute(
+            "class",
+            "fixed z-50 w-80 max-w-[min(20rem,calc(100vw-1.5rem))] overflow-hidden rounded-lg border border-base-300 bg-base-100 shadow-xl"
+          )
+          overlay.style.pointerEvents = "none"
+
+          const iframe = document.createElement("iframe")
+          iframe.src = embedUrl
+          iframe.title = "YouTube-Vorschau"
+          iframe.setAttribute(
+            "class",
+            "aspect-video h-auto w-full border-0"
+          )
+          iframe.allow =
+            "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          iframe.allowFullscreen = true
+
+          overlay.appendChild(iframe)
+          document.body.appendChild(overlay)
+          this.overlay = overlay
+
+          const rect = this.el.getBoundingClientRect()
+          const overlayRect = overlay.getBoundingClientRect()
+          let top = rect.bottom + 8
+          let left = rect.right - overlayRect.width
+
+          if (left < 8) left = 8
+          if (top + overlayRect.height > window.innerHeight - 8) {
+            top = Math.max(8, rect.top - overlayRect.height - 8)
+          }
+
+          overlay.style.top = `${top}px`
+          overlay.style.left = `${left}px`
+        }
+
+        this.onEnter = () => this.show()
+        this.onLeave = () => this.hide()
+        this.onScroll = () => this.hide()
+
+        this.el.addEventListener("mouseenter", this.onEnter)
+        this.el.addEventListener("mouseleave", this.onLeave)
+        window.addEventListener("scroll", this.onScroll, true)
+      },
+      destroyed() {
+        this.hide()
+        this.el.removeEventListener("mouseenter", this.onEnter)
+        this.el.removeEventListener("mouseleave", this.onLeave)
+        window.removeEventListener("scroll", this.onScroll, true)
+      }
+    }
+  </script>
 
   <.modal
     :if={@live_action in [:new, :edit, :show]}

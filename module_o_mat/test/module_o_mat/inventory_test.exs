@@ -79,6 +79,88 @@ defmodule ModuleOMat.InventoryTest do
       assert {:error, changeset} = Inventory.create_eurorack_module(attrs)
       assert "darf nicht negativ sein" in errors_on(changeset).current_draw_plus12v_ma
     end
+
+    test "speichert mehrere YouTube-Links mit Position und normalisierter URL" do
+      attrs =
+        valid_eurorack_module_attrs(%{
+          youtube_videos: [
+            %{url: "https://youtu.be/dQw4w9WgXcQ"},
+            %{url: "https://www.youtube.com/watch?v=aaaaaaaaaaa"}
+          ]
+        })
+
+      assert {:ok, eurorack_module} = Inventory.create_eurorack_module(attrs)
+      eurorack_module = Inventory.get_eurorack_module!(eurorack_module.id)
+
+      assert [
+               %{url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", position: 0},
+               %{url: "https://www.youtube.com/watch?v=aaaaaaaaaaa", position: 1}
+             ] = eurorack_module.youtube_videos
+    end
+
+    test "liefert einen Fehler bei ungueltiger YouTube-URL" do
+      attrs =
+        valid_eurorack_module_attrs(%{
+          youtube_videos: [%{url: "https://example.com/video"}]
+        })
+
+      assert {:error, changeset} = Inventory.create_eurorack_module(attrs)
+
+      assert %{youtube_videos: [%{url: ["muss eine gueltige YouTube-URL sein"]}]} =
+               errors_on(changeset)
+    end
+  end
+
+  describe "primary_youtube_video/1" do
+    test "liefert das erste Video nach Position" do
+      eurorack_module =
+        eurorack_module_fixture(%{
+          youtube_videos: [
+            %{url: "https://www.youtube.com/watch?v=bbbbbbbbbbb"},
+            %{url: "https://www.youtube.com/watch?v=ccccccccccc"}
+          ]
+        })
+
+      primary = Inventory.primary_youtube_video(eurorack_module)
+      assert primary.url == "https://www.youtube.com/watch?v=bbbbbbbbbbb"
+      assert primary.position == 0
+    end
+
+    test "liefert nil ohne Videos" do
+      eurorack_module = eurorack_module_fixture()
+      assert Inventory.primary_youtube_video(eurorack_module) == nil
+    end
+  end
+
+  describe "update_eurorack_module/2 youtube_videos" do
+    test "aendert die Reihenfolge der YouTube-Links" do
+      eurorack_module =
+        eurorack_module_fixture(%{
+          youtube_videos: [
+            %{url: "https://www.youtube.com/watch?v=first111111"},
+            %{url: "https://www.youtube.com/watch?v=second22222"}
+          ]
+        })
+
+      [first, second] = eurorack_module.youtube_videos
+
+      assert {:ok, _} =
+               Inventory.update_eurorack_module(eurorack_module, %{
+                 youtube_videos: [
+                   %{"id" => second.id, "url" => second.url},
+                   %{"id" => first.id, "url" => first.url}
+                 ]
+               })
+
+      updated = Inventory.get_eurorack_module!(eurorack_module.id)
+
+      assert Enum.map(updated.youtube_videos, & &1.url) == [
+               "https://www.youtube.com/watch?v=second22222",
+               "https://www.youtube.com/watch?v=first111111"
+             ]
+
+      assert Enum.map(updated.youtube_videos, & &1.position) == [0, 1]
+    end
   end
 
   describe "list_eurorack_modules/0" do

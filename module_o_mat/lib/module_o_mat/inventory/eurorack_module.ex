@@ -9,6 +9,8 @@ defmodule ModuleOMat.Inventory.EurorackModule do
   use Ecto.Schema
   import Ecto.Changeset
 
+  alias ModuleOMat.Inventory.YoutubeVideo
+
   @required_fields [:manufacturer, :name, :hp, :type]
   @optional_fields [
     :current_draw_plus12v_ma,
@@ -46,11 +48,18 @@ defmodule ModuleOMat.Inventory.EurorackModule do
 
     field(:deleted_at, :utc_datetime)
 
+    has_many(:youtube_videos, YoutubeVideo,
+      preload_order: [asc: :position],
+      on_replace: :delete
+    )
+
     timestamps(type: :utc_datetime)
   end
 
   @doc false
   def changeset(eurorack_module, attrs) do
+    attrs = inject_youtube_positions(attrs)
+
     eurorack_module
     |> cast(attrs, @required_fields ++ @optional_fields)
     |> update_change(:type, &trim/1)
@@ -69,12 +78,91 @@ defmodule ModuleOMat.Inventory.EurorackModule do
       message: "darf nicht negativ sein"
     )
     |> validate_number(:depth_mm, greater_than_or_equal_to: 0, message: "darf nicht negativ sein")
+    |> cast_assoc(:youtube_videos,
+      with: &YoutubeVideo.changeset/2,
+      sort_param: :youtube_videos_order,
+      drop_param: :youtube_videos_drop
+    )
   end
 
   @doc false
   def manual_changeset(eurorack_module, attrs) do
     cast(eurorack_module, attrs, @manual_fields)
   end
+
+  defp inject_youtube_positions(attrs) when is_map(attrs) do
+    cond do
+      is_list(Map.get(attrs, :youtube_videos)) ->
+        Map.update!(attrs, :youtube_videos, &assign_positions/1)
+
+      is_list(Map.get(attrs, "youtube_videos")) ->
+        Map.update!(attrs, "youtube_videos", &assign_positions/1)
+
+      is_map(Map.get(attrs, "youtube_videos")) ->
+        order = Map.get(attrs, "youtube_videos_order") || Map.get(attrs, :youtube_videos_order)
+        Map.update!(attrs, "youtube_videos", &assign_positions_map(&1, order))
+
+      is_map(Map.get(attrs, :youtube_videos)) ->
+        order = Map.get(attrs, :youtube_videos_order) || Map.get(attrs, "youtube_videos_order")
+        Map.update!(attrs, :youtube_videos, &assign_positions_map(&1, order))
+
+      true ->
+        attrs
+    end
+  end
+
+  defp inject_youtube_positions(attrs), do: attrs
+
+  defp assign_positions(videos) when is_list(videos) do
+    videos
+    |> Enum.with_index()
+    |> Enum.map(fn {video, index} -> put_position(video, index) end)
+  end
+
+  defp assign_positions_map(videos, order) when is_map(videos) do
+    keys =
+      cond do
+        is_list(order) and order != [] ->
+          Enum.map(order, &to_string/1)
+
+        true ->
+          videos
+          |> Map.keys()
+          |> Enum.map(&to_string/1)
+          |> Enum.sort_by(fn key ->
+            case Integer.parse(key) do
+              {int, ""} -> int
+              _ -> 0
+            end
+          end)
+      end
+
+    keys
+    |> Enum.with_index()
+    |> Map.new(fn {key, index} ->
+      video = Map.get(videos, key) || Map.get(videos, maybe_int_key(key)) || %{}
+      {key, put_position(video, index)}
+    end)
+  end
+
+  defp maybe_int_key(key) do
+    case Integer.parse(to_string(key)) do
+      {int, ""} -> int
+      _ -> key
+    end
+  end
+
+  defp put_position(video, index) when is_map(video) do
+    cond do
+      Map.has_key?(video, "url") or Map.has_key?(video, "id") or Map.has_key?(video, "position") ->
+        Map.put(video, "position", index)
+
+      true ->
+        Map.put(video, :position, index)
+    end
+  end
+
+  defp put_position(video, _index), do: video
 
   defp trim(value) when is_binary(value), do: String.trim(value)
   defp trim(value), do: value

@@ -10,6 +10,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
   alias ModuleOMat.Inventory
   alias ModuleOMat.Inventory.EurorackModule
   alias ModuleOMat.Inventory.ModuleType
+  alias ModuleOMat.Inventory.Youtube
 
   @impl true
   def mount(_params, _session, socket) do
@@ -38,10 +39,12 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
   end
 
   defp apply_action(socket, :new, _params) do
+    eurorack_module = %EurorackModule{youtube_videos: []}
+
     socket
     |> assign(:page_title, "Neues Modul erfassen")
-    |> assign(:eurorack_module, %EurorackModule{})
-    |> assign(:form, to_form(Inventory.change_eurorack_module(%EurorackModule{})))
+    |> assign(:eurorack_module, eurorack_module)
+    |> assign(:form, to_form(Inventory.change_eurorack_module(eurorack_module)))
   end
 
   defp apply_action(socket, :edit, %{"id" => id}) do
@@ -250,6 +253,31 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
     end
   end
 
+  def handle_event("add_youtube_video", _params, socket) do
+    {:noreply, update_form_youtube_videos(socket, &(&1 ++ [%{"url" => ""}]))}
+  end
+
+  def handle_event("remove_youtube_video", %{"index" => index}, socket) do
+    index = String.to_integer(index)
+
+    {:noreply, update_form_youtube_videos(socket, &List.delete_at(&1, index))}
+  end
+
+  def handle_event("move_youtube_video", %{"index" => index, "direction" => direction}, socket) do
+    index = String.to_integer(index)
+    offset = if direction == "up", do: -1, else: 1
+    new_index = index + offset
+
+    {:noreply,
+     update_form_youtube_videos(socket, fn videos ->
+       cond do
+         new_index < 0 -> videos
+         new_index >= length(videos) -> videos
+         true -> swap_at(videos, index, new_index)
+       end
+     end)}
+  end
+
   defp save_eurorack_module(socket, :new, params) do
     case Inventory.create_eurorack_module(params) do
       {:ok, eurorack_module} ->
@@ -395,6 +423,108 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
     |> assign(:types, available_types())
   end
 
+  defp update_form_youtube_videos(socket, fun) do
+    form = socket.assigns.form
+    videos = form |> youtube_videos_as_params() |> fun.() |> index_youtube_video_params()
+    params = form |> module_form_params() |> Map.put("youtube_videos", videos)
+
+    form =
+      socket.assigns.eurorack_module
+      |> Inventory.change_eurorack_module(params)
+      |> Map.put(:action, :validate)
+      |> to_form()
+
+    assign(socket, :form, form)
+  end
+
+  defp module_form_params(form) do
+    fields = [
+      "manufacturer",
+      "name",
+      "hp",
+      "type",
+      "current_draw_plus12v_ma",
+      "current_draw_minus12v_ma",
+      "current_draw_plus5v_ma",
+      "depth_mm",
+      "description",
+      "manual_url"
+    ]
+
+    Enum.reduce(fields, %{}, fn field, acc ->
+      Map.put(acc, field, form_field_param(form, field))
+    end)
+  end
+
+  defp form_field_param(%{params: params}, field) when is_map_key(params, field) do
+    case Map.get(params, field) do
+      nil -> ""
+      value -> to_string(value)
+    end
+  end
+
+  defp form_field_param(form, field) do
+    atom = String.to_existing_atom(field)
+
+    case Ecto.Changeset.get_field(form.source, atom) do
+      nil -> ""
+      value -> to_string(value)
+    end
+  end
+
+  defp youtube_videos_as_params(%{params: %{"youtube_videos" => videos}}) when is_map(videos) do
+    videos
+    |> Enum.sort_by(fn {key, _} ->
+      case Integer.parse(to_string(key)) do
+        {int, ""} -> int
+        _ -> 0
+      end
+    end)
+    |> Enum.map(fn {_key, video} ->
+      video
+      |> Map.take(["id", "url"])
+      |> Map.update("url", "", fn
+        nil -> ""
+        url -> to_string(url)
+      end)
+      |> then(fn map ->
+        case Map.get(map, "id") do
+          id when id in [nil, ""] -> Map.delete(map, "id")
+          id -> Map.put(map, "id", to_string(id))
+        end
+      end)
+    end)
+  end
+
+  defp youtube_videos_as_params(form) do
+    (Ecto.Changeset.get_field(form.source, :youtube_videos) || [])
+    |> Enum.map(fn video ->
+      id = Map.get(video, :id)
+      url = Map.get(video, :url) || ""
+
+      if id do
+        %{"id" => to_string(id), "url" => url}
+      else
+        %{"url" => url}
+      end
+    end)
+  end
+
+  defp index_youtube_video_params(videos) do
+    videos
+    |> Enum.with_index()
+    |> Map.new(fn {video, index} -> {to_string(index), video} end)
+  end
+
+  defp swap_at(list, i, j) do
+    a = Enum.at(list, i)
+    b = Enum.at(list, j)
+
+    list
+    |> List.replace_at(i, b)
+    |> List.replace_at(j, a)
+  end
+
   attr :form, Phoenix.HTML.Form, required: true
   attr :disabled, :boolean, default: false
   attr :manufacturers, :list, default: []
@@ -483,6 +613,155 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
           uploads={@uploads}
           eurorack_module={@eurorack_module}
         />
+      </div>
+      <div class="sm:col-span-2">
+        <.youtube_video_fields
+          form={@form}
+          disabled={@disabled}
+          youtube_videos={youtube_videos_for_display(@eurorack_module, @form)}
+        />
+      </div>
+    </div>
+    """
+  end
+
+  defp youtube_videos_for_display(%EurorackModule{youtube_videos: videos}, _form)
+       when is_list(videos),
+       do: videos
+
+  defp youtube_videos_for_display(_eurorack_module, form) do
+    Ecto.Changeset.get_field(form.source, :youtube_videos) || []
+  end
+
+  attr :eurorack_module, EurorackModule, required: true
+
+  defp youtube_play_button(assigns) do
+    primary = Inventory.primary_youtube_video(assigns.eurorack_module)
+
+    assigns =
+      assign(assigns,
+        primary: primary,
+        watch_url: primary && Youtube.watch_url(primary.url),
+        embed_url: primary && Youtube.embed_url(primary.url, autoplay: true, mute: true)
+      )
+
+    ~H"""
+    <a
+      :if={@primary && @watch_url}
+      href={@watch_url}
+      id={"open-youtube-#{@eurorack_module.id}"}
+      class="btn btn-ghost btn-xs relative"
+      title="YouTube-Video oeffnen"
+      aria-label="YouTube-Video oeffnen"
+      target="_blank"
+      rel="noopener noreferrer"
+      phx-hook=".YoutubePreview"
+      phx-update="ignore"
+      data-embed-url={@embed_url}
+    >
+      <.icon name="hero-play" />
+    </a>
+    """
+  end
+
+  attr :form, Phoenix.HTML.Form, required: true
+  attr :disabled, :boolean, default: false
+  attr :youtube_videos, :list, default: []
+
+  defp youtube_video_fields(assigns) do
+    video_count =
+      assigns.form.source
+      |> Ecto.Changeset.get_field(:youtube_videos)
+      |> List.wrap()
+      |> length()
+
+    assigns = assign(assigns, :youtube_video_count, video_count)
+
+    ~H"""
+    <div id="youtube-video-fields" class="fieldset mb-2">
+      <span class="label mb-1">YouTube-Videos</span>
+
+      <div :if={@disabled} id="youtube-videos-show" class="space-y-2">
+        <a
+          :for={{video, index} <- Enum.with_index(@youtube_videos)}
+          id={"youtube-video-link-#{index}"}
+          href={Youtube.watch_url(video.url) || video.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="link link-primary block break-all"
+        >
+          {video.url}
+        </a>
+        <span :if={@youtube_videos == []} class="text-base-content/50">
+          Keine Videos hinterlegt.
+        </span>
+      </div>
+
+      <div :if={!@disabled} id="youtube-videos-edit" class="space-y-3">
+        <.inputs_for :let={v} field={@form[:youtube_videos]}>
+          <div
+            id={"youtube-video-row-#{v.index}"}
+            class="flex flex-col gap-2 sm:flex-row sm:items-start"
+          >
+            <input :if={v[:id].value} type="hidden" name={v[:id].name} value={v[:id].value} />
+            <div class="min-w-0 grow">
+              <.input
+                field={v[:url]}
+                type="text"
+                label={"Video #{v.index + 1}"}
+                placeholder="https://www.youtube.com/watch?v=…"
+              />
+            </div>
+            <div class="flex shrink-0 gap-1 sm:mt-8">
+              <button
+                type="button"
+                id={"move-youtube-video-up-#{v.index}"}
+                class="btn btn-ghost btn-square btn-xs"
+                title="Nach oben"
+                aria-label="Nach oben"
+                phx-click="move_youtube_video"
+                phx-value-index={v.index}
+                phx-value-direction="up"
+                disabled={v.index == 0}
+              >
+                <.icon name="hero-arrow-up" class="size-4" />
+              </button>
+              <button
+                type="button"
+                id={"move-youtube-video-down-#{v.index}"}
+                class="btn btn-ghost btn-square btn-xs"
+                title="Nach unten"
+                aria-label="Nach unten"
+                phx-click="move_youtube_video"
+                phx-value-index={v.index}
+                phx-value-direction="down"
+                disabled={v.index >= @youtube_video_count - 1}
+              >
+                <.icon name="hero-arrow-down" class="size-4" />
+              </button>
+              <button
+                type="button"
+                id={"remove-youtube-video-#{v.index}"}
+                class="btn btn-ghost btn-square btn-xs text-error"
+                title="Entfernen"
+                aria-label="Entfernen"
+                phx-click="remove_youtube_video"
+                phx-value-index={v.index}
+              >
+                <.icon name="hero-trash" class="size-4" />
+              </button>
+            </div>
+          </div>
+        </.inputs_for>
+
+        <button
+          type="button"
+          id="add-youtube-video-button"
+          class="btn btn-sm"
+          phx-click="add_youtube_video"
+        >
+          <.icon name="hero-plus" class="size-4" /> Link hinzufuegen
+        </button>
       </div>
     </div>
     """
