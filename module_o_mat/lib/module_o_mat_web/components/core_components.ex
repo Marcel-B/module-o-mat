@@ -327,13 +327,14 @@ defmodule ModuleOMatWeb.CoreComponents do
       </.modal>
   """
   attr :id, :string, required: true
+  attr :box_class, :string, default: nil, doc: "additional classes for the modal-box container"
   slot :title
   slot :inner_block, required: true
 
   def modal(assigns) do
     ~H"""
     <dialog id={@id} class="modal modal-open" open>
-      <div class="modal-box">
+      <div class={["modal-box", @box_class]}>
         <h3 :if={@title != []} class="text-lg font-bold mb-4">{render_slot(@title)}</h3>
         {render_slot(@inner_block)}
       </div>
