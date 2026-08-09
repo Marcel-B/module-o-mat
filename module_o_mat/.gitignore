@@ -1,8 +1,11 @@
 # The directory Mix will write compiled artifacts to.
 /_build/
 
-# If you run "mix test --cover", coverage assets end up here.
+# If you run "mix test --cover" or "mix coveralls.html", coverage assets end up here.
 /cover/
+
+# Combined docs + coverage site assembled for GitHub Pages deployment in CI.
+/public/
 
 # The directory Mix downloads your dependencies sources to.
 /deps/

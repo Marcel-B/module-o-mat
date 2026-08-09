@@ -50,11 +50,16 @@ jobs:
       - name: Formatierung pruefen
         run: mix format --check-formatted
 
+      - name: Datenbank vorbereiten
+        run: |
+          mix ecto.create --quiet
+          mix ecto.migrate --quiet
+
       - name: Tests mit Testabdeckung ausfuehren
         id: run_tests
         run: |
           set -o pipefail
-          mix test --cover --trace 2>&1 | tee test_output.log
+          mix coveralls.html --trace 2>&1 | tee test_output.log
 
       - name: Uebersicht der Testergebnisse und Testabdeckung erzeugen
         if: always()
@@ -78,8 +83,14 @@ jobs:
             echo "### Testabdeckung"
             echo
             echo '```text'
-            awk '/^\| Percentage/,/Total/' "$LOG"
+            awk '/^COV /,/^\[TOTAL\]/' "$LOG"
             echo '```'
+            echo
+            if [ "${{ github.ref }}" = "refs/heads/main" ] && [ "${{ github.event_name }}" = "push" ]; then
+              echo "Der vollstaendige HTML-Coverage-Report und die API-Dokumentation werden im Job \"Docs & Coverage veroeffentlichen\" auf GitHub Pages veroeffentlicht."
+            else
+              echo "Den vollstaendigen HTML-Coverage-Report gibt es als Artefakt (\"coverage-report\") unten an diesem Workflow-Run. Auf GitHub Pages veroeffentlicht wird er nur bei einem Push auf \`main\`."
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: HTML-Coverage-Report als Artefakt hochladen
@@ -89,3 +100,93 @@ jobs:
           name: coverage-report
           path: module_o_mat/cover
           retention-days: 14
+
+  pages:
+    name: Docs & Coverage veroeffentlichen
+    needs: build-and-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: module_o_mat
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Code auschecken
+        uses: actions/checkout@v4
+
+      - name: Erlang/Elixir einrichten
+        id: beam
+        uses: erlef/setup-beam@v1
+        with:
+          otp-version: "29"
+          elixir-version: "1.20"
+
+      - name: Dependency-Cache wiederherstellen
+        uses: actions/cache@v4
+        with:
+          path: |
+            module_o_mat/deps
+            module_o_mat/_build
+          key: ${{ runner.os }}-mix-docs-${{ steps.beam.outputs.otp-version }}-${{ steps.beam.outputs.elixir-version }}-${{ hashFiles('module_o_mat/mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-mix-docs-${{ steps.beam.outputs.otp-version }}-${{ steps.beam.outputs.elixir-version }}-
+
+      - name: Coverage-Report-Artefakt aus dem Test-Job herunterladen
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-report
+          path: module_o_mat/cover
+
+      - name: Abhaengigkeiten installieren
+        run: mix deps.get
+
+      - name: API-Dokumentation erzeugen
+        run: mix docs
+
+      - name: Statische Seite aus Docs und Coverage-Report zusammenstellen
+        run: |
+          rm -rf public
+          mkdir -p public
+          cp -r doc public/docs
+          cp -r cover public/coverage
+          cat > public/index.html <<'HTML'
+          <!doctype html>
+          <html lang="de">
+            <head>
+              <meta charset="utf-8" />
+              <title>Module-o-Mat – Reports</title>
+              <style>
+                body { font-family: system-ui, sans-serif; max-width: 40rem; margin: 3rem auto; padding: 0 1rem; }
+                h1 { margin-bottom: 0.25rem; }
+                ul { line-height: 2; }
+              </style>
+            </head>
+            <body>
+              <h1>Module-o-Mat</h1>
+              <p>Automatisch generierte Berichte vom letzten Build des <code>main</code>-Branches.</p>
+              <ul>
+                <li><a href="docs/">API-Dokumentation</a></li>
+                <li><a href="coverage/excoveralls.html">Testabdeckungs-Report</a></li>
+              </ul>
+            </body>
+          </html>
+          HTML
+
+      - name: Pages-Artefakt hochladen
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: module_o_mat/public
+
+      - name: Auf GitHub Pages veroeffentlichen
+        id: deployment
+        uses: actions/deploy-pages@v5

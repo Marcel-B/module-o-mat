@@ -13,7 +13,7 @@ defmodule ModuleOMat.MixProject do
       deps: deps(),
       aliases: aliases(),
       docs: docs(),
-      test_coverage: [summary: [threshold: 0]]
+      test_coverage: [tool: ExCoveralls]
     ]
   end
 
@@ -27,7 +27,13 @@ defmodule ModuleOMat.MixProject do
 
   def cli do
     [
-      preferred_envs: [precommit: :test]
+      preferred_envs: [
+        precommit: :test,
+        coveralls: :test,
+        "coveralls.detail": :test,
+        "coveralls.html": :test,
+        "coveralls.json": :test
+      ]
     ]
   end
 
@@ -66,7 +72,8 @@ defmodule ModuleOMat.MixProject do
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.2.0"},
       {:bandit, "~> 1.5"},
-      {:ex_doc, "~> 0.40", only: :dev, runtime: false}
+      {:ex_doc, "~> 0.40", only: :dev, runtime: false},
+      {:excoveralls, "~> 0.18", only: :test}
     ]
   end
 
