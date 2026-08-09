@@ -49,6 +49,69 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
       assert has_element?(view, "#clear-filters-button")
     end
 
+    test "zeigt Kaufpreis und Wert in der Tabelle sowie Summen in der Fusszeile", %{conn: conn} do
+      maths =
+        eurorack_module_fixture(%{
+          manufacturer: "Make Noise",
+          name: "Maths",
+          type: "Envelope",
+          hp: 20,
+          purchase_price: "100.00",
+          current_value: "120.50"
+        })
+
+      plaits =
+        eurorack_module_fixture(%{
+          manufacturer: "Mutable Instruments",
+          name: "Plaits",
+          type: "VCO",
+          hp: 12,
+          purchase_price: "200.00",
+          current_value: "180.00"
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      assert has_element?(view, "#eurorack-module-#{maths.id}", "100,00 €")
+      assert has_element?(view, "#eurorack-module-#{maths.id}", "120,50 €")
+      assert has_element?(view, "#eurorack-module-#{plaits.id}", "200,00 €")
+      assert has_element?(view, "#inventory-stats", "2 Module")
+      assert has_element?(view, "#inventory-stats", "32")
+      assert has_element?(view, "#inventory-stats", "300,00 €")
+      assert has_element?(view, "#inventory-stats", "300,50 €")
+    end
+
+    test "aktualisiert die Fusszeilen-Statistik bei aktivem Filter", %{conn: conn} do
+      eurorack_module_fixture(%{
+        manufacturer: "Make Noise",
+        name: "Maths",
+        type: "Envelope",
+        hp: 20,
+        purchase_price: "100.00",
+        current_value: "120.00"
+      })
+
+      eurorack_module_fixture(%{
+        manufacturer: "Mutable Instruments",
+        name: "Plaits",
+        type: "VCO",
+        hp: 12,
+        purchase_price: "200.00",
+        current_value: "180.00"
+      })
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      view
+      |> form("#module-filter-form", %{"type" => "VCO"})
+      |> render_change()
+
+      assert has_element?(view, "#inventory-stats", "1 Modul")
+      assert has_element?(view, "#inventory-stats", "12")
+      assert has_element?(view, "#inventory-stats", "200,00 €")
+      assert has_element?(view, "#inventory-stats", "180,00 €")
+    end
+
     test "bietet im Typfilter nur Typen an, die an Modulen vorkommen", %{conn: conn} do
       eurorack_module_fixture(%{type: "VCO"})
       eurorack_module_fixture(%{type: "Envelope"})
@@ -231,7 +294,9 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
         "manufacturer" => "Make Noise",
         "name" => "Maths",
         "hp" => "20",
-        "type" => "Envelope"
+        "type" => "Envelope",
+        "purchase_price" => "249.99",
+        "current_value" => "199.50"
       }
 
       html =
@@ -246,8 +311,26 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
       assert [eurorack_module] = Inventory.list_eurorack_modules()
       assert eurorack_module.manufacturer == "Make Noise"
       assert eurorack_module.name == "Maths"
+      assert Decimal.eq?(eurorack_module.purchase_price, Decimal.new("249.99"))
+      assert Decimal.eq?(eurorack_module.current_value, Decimal.new("199.50"))
 
       assert has_element?(view, "#eurorack-module-#{eurorack_module.id}")
+      assert has_element?(view, "#eurorack-module-#{eurorack_module.id}", "249,99 €")
+      assert has_element?(view, "#eurorack-module-#{eurorack_module.id}", "199,50 €")
+    end
+
+    test "zeigt Kaufpreis- und Wert-Felder im Formular", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/eurorack_modules/new")
+
+      assert has_element?(
+               view,
+               "#eurorack-module-form input[name='eurorack_module[purchase_price]']"
+             )
+
+      assert has_element?(
+               view,
+               "#eurorack-module-form input[name='eurorack_module[current_value]']"
+             )
     end
 
     test "speichert gewaehlte Subtypen mit dem Modul", %{conn: conn} do
@@ -898,6 +981,69 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
                view,
                "#youtube-video-link-0[href='https://www.youtube.com/watch?v=dQw4w9WgXcQ']"
              )
+    end
+  end
+
+  describe "Datensicherung" do
+    test "oeffnet den Dialog beim Klick auf 'Datensicherung'", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      refute has_element?(view, "#backup-modal")
+
+      view
+      |> element("#backup-button")
+      |> render_click()
+
+      assert_patch(view, ~p"/backup")
+      assert has_element?(view, "#backup-modal")
+      assert has_element?(view, "#export-backup-button")
+      assert has_element?(view, "#backup-import-form")
+    end
+
+    test "importiert ein Backup und ersetzt vorhandene Daten", %{conn: conn} do
+      kept =
+        eurorack_module_fixture(%{
+          manufacturer: "Kept",
+          name: "Module A",
+          type: "VCO"
+        })
+
+      zip_path =
+        Path.join(
+          System.tmp_dir!(),
+          "module_o_mat_live_backup_#{System.unique_integer([:positive])}.zip"
+        )
+
+      assert {:ok, _} = Inventory.export_backup(zip_path)
+
+      _extra =
+        eurorack_module_fixture(%{
+          manufacturer: "Extra",
+          name: "Module B",
+          type: "LFO"
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/backup")
+
+      backup =
+        file_input(view, "#backup-import-form", :backup, [
+          %{
+            name: "inventory.zip",
+            content: File.read!(zip_path),
+            type: "application/zip"
+          }
+        ])
+
+      assert render_upload(backup, "inventory.zip") =~ "inventory.zip"
+
+      view
+      |> form("#backup-import-form")
+      |> render_submit()
+
+      assert_patch(view, ~p"/")
+      assert render(view) =~ "Backup wurde importiert"
+      assert Inventory.get_eurorack_module!(kept.id).name == "Module A"
+      assert Enum.map(Inventory.list_eurorack_modules(), & &1.name) == ["Module A"]
     end
   end
 

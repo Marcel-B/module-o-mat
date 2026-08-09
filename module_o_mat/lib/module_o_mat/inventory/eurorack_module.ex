@@ -19,7 +19,9 @@ defmodule ModuleOMat.Inventory.EurorackModule do
     :current_draw_plus5v_ma,
     :depth_mm,
     :description,
-    :manual_url
+    :manual_url,
+    :purchase_price,
+    :current_value
   ]
   @manual_fields [
     :manual_pdf_key,
@@ -42,6 +44,9 @@ defmodule ModuleOMat.Inventory.EurorackModule do
     field(:depth_mm, :integer)
     field(:description, :string)
     field(:manual_url, :string)
+
+    field(:purchase_price, :decimal)
+    field(:current_value, :decimal)
 
     field(:manual_pdf_key, :string)
     field(:manual_pdf_filename, :string)
@@ -82,6 +87,14 @@ defmodule ModuleOMat.Inventory.EurorackModule do
       message: "darf nicht negativ sein"
     )
     |> validate_number(:depth_mm, greater_than_or_equal_to: 0, message: "darf nicht negativ sein")
+    |> validate_number(:purchase_price,
+      greater_than_or_equal_to: 0,
+      message: "darf nicht negativ sein"
+    )
+    |> validate_number(:current_value,
+      greater_than_or_equal_to: 0,
+      message: "darf nicht negativ sein"
+    )
     |> cast_assoc(:youtube_videos,
       with: &YoutubeVideo.changeset/2,
       sort_param: :youtube_videos_order,

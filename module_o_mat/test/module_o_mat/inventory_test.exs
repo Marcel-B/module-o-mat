@@ -87,6 +87,27 @@ defmodule ModuleOMat.InventoryTest do
       assert "darf nicht negativ sein" in errors_on(changeset).current_draw_plus12v_ma
     end
 
+    test "speichert optionale Kaufpreis- und Wert-Angaben" do
+      attrs =
+        valid_eurorack_module_attrs(%{
+          purchase_price: "249.99",
+          current_value: "199.50"
+        })
+
+      assert {:ok, %EurorackModule{} = eurorack_module} = Inventory.create_eurorack_module(attrs)
+      assert Decimal.eq?(eurorack_module.purchase_price, Decimal.new("249.99"))
+      assert Decimal.eq?(eurorack_module.current_value, Decimal.new("199.50"))
+    end
+
+    test "liefert einen Fehler bei negativem Kaufpreis oder Wert" do
+      attrs = valid_eurorack_module_attrs(%{purchase_price: "-1", current_value: "-0.01"})
+
+      assert {:error, changeset} = Inventory.create_eurorack_module(attrs)
+      errors = errors_on(changeset)
+      assert "darf nicht negativ sein" in errors.purchase_price
+      assert "darf nicht negativ sein" in errors.current_value
+    end
+
     test "speichert mehrere YouTube-Links mit Position und normalisierter URL" do
       attrs =
         valid_eurorack_module_attrs(%{
@@ -339,6 +360,96 @@ defmodule ModuleOMat.InventoryTest do
         |> Enum.map(& &1.id)
 
       assert module.id in ids
+    end
+  end
+
+  describe "inventory_stats/1" do
+    test "liefert Nullwerte, wenn keine Module existieren" do
+      assert Inventory.inventory_stats() == %{
+               count: 0,
+               total_hp: 0,
+               total_purchase_price: Decimal.new(0),
+               total_current_value: Decimal.new(0)
+             }
+    end
+
+    test "summiert Module, HP und Eurobetraege ueber den gesamten Bestand" do
+      eurorack_module_fixture(%{
+        name: "Maths",
+        hp: 20,
+        purchase_price: "100.50",
+        current_value: "120.00"
+      })
+
+      eurorack_module_fixture(%{
+        name: "Plaits",
+        manufacturer: "Mutable Instruments",
+        hp: 12,
+        purchase_price: "199.50",
+        current_value: nil
+      })
+
+      stats = Inventory.inventory_stats()
+
+      assert stats.count == 2
+      assert stats.total_hp == 32
+      assert Decimal.eq?(stats.total_purchase_price, Decimal.new("300.00"))
+      assert Decimal.eq?(stats.total_current_value, Decimal.new("120.00"))
+    end
+
+    test "wendet dieselben Filter wie list_eurorack_modules an" do
+      eurorack_module_fixture(%{
+        manufacturer: "Make Noise",
+        name: "Maths",
+        type: "Envelope",
+        hp: 20,
+        purchase_price: "100.00",
+        current_value: "110.00"
+      })
+
+      eurorack_module_fixture(%{
+        manufacturer: "Mutable Instruments",
+        name: "Plaits",
+        type: "VCO",
+        hp: 12,
+        purchase_price: "200.00",
+        current_value: "180.00"
+      })
+
+      stats = Inventory.inventory_stats(types: ["VCO"])
+
+      assert stats.count == 1
+      assert stats.total_hp == 12
+      assert Decimal.eq?(stats.total_purchase_price, Decimal.new("200.00"))
+      assert Decimal.eq?(stats.total_current_value, Decimal.new("180.00"))
+    end
+
+    test "ignoriert soft-geloeschte Module" do
+      sichtbares =
+        eurorack_module_fixture(%{
+          name: "Maths",
+          hp: 20,
+          purchase_price: "50.00",
+          current_value: "60.00"
+        })
+
+      geloeschtes =
+        eurorack_module_fixture(%{
+          name: "Plaits",
+          manufacturer: "Mutable Instruments",
+          hp: 12,
+          purchase_price: "100.00",
+          current_value: "90.00"
+        })
+
+      {:ok, _} = Inventory.soft_delete_eurorack_module(geloeschtes)
+
+      stats = Inventory.inventory_stats()
+
+      assert stats.count == 1
+      assert stats.total_hp == sichtbares.hp
+      assert Decimal.eq?(stats.total_purchase_price, Decimal.new("50.00"))
+      assert Decimal.eq?(stats.total_current_value, Decimal.new("60.00"))
     end
   end
 

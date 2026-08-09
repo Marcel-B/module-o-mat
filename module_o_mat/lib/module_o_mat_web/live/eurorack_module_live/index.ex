@@ -30,6 +30,11 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
        accept: ~w(.pdf),
        max_entries: 1,
        max_file_size: 20_000_000
+     )
+     |> allow_upload(:backup,
+       accept: ~w(.zip),
+       max_entries: 1,
+       max_file_size: 100_000_000
      )}
   end
 
@@ -73,6 +78,13 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
     |> assign(:module_type_form, to_form(Inventory.change_module_type(%ModuleType{})))
     |> assign(:editing_module_type, nil)
     |> assign(:module_type_edit_form, nil)
+  end
+
+  defp apply_action(socket, :backup, _params) do
+    socket
+    |> assign(:page_title, "Datensicherung")
+    |> assign(:eurorack_module, nil)
+    |> assign(:form, nil)
   end
 
   defp apply_action(socket, :index, _params) do
@@ -253,6 +265,41 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
     {:noreply, cancel_upload(socket, :manual, ref)}
   end
 
+  def handle_event("cancel_backup_upload", %{"ref" => ref}, socket) do
+    {:noreply, cancel_upload(socket, :backup, ref)}
+  end
+
+  def handle_event("validate_backup", _params, socket) do
+    {:noreply, socket}
+  end
+
+  def handle_event("import_backup", _params, socket) do
+    results =
+      consume_uploaded_entries(socket, :backup, fn %{path: path}, _entry ->
+        case Inventory.import_backup(path) do
+          :ok -> {:ok, :imported}
+          {:error, reason} -> {:ok, {:error, reason}}
+        end
+      end)
+
+    case results do
+      [:imported] ->
+        {:noreply,
+         socket
+         |> reload_eurorack_modules()
+         |> assign(:manufacturers, Inventory.list_manufacturers())
+         |> assign(:types, available_types())
+         |> put_flash(:info, "Backup wurde importiert. Alle bisherigen Daten wurden ersetzt.")
+         |> push_patch(to: ~p"/")}
+
+      [{:error, reason}] ->
+        {:noreply, put_flash(socket, :error, "Import fehlgeschlagen: #{reason}")}
+
+      [] ->
+        {:noreply, put_flash(socket, :error, "Bitte zuerst eine ZIP-Datei auswaehlen.")}
+    end
+  end
+
   def handle_event("remove_manual", _params, socket) do
     case Inventory.remove_manual(socket.assigns.eurorack_module) do
       {:ok, eurorack_module} ->
@@ -383,6 +430,47 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
     |> Enum.chunk_by(& &1.type)
   end
 
+  defp format_euro(nil), do: "—"
+
+  defp format_euro(%Decimal{} = amount) do
+    format_euro_sum(amount)
+  end
+
+  defp format_euro_sum(amount) when is_integer(amount) do
+    amount
+    |> Decimal.new()
+    |> format_euro_sum()
+  end
+
+  defp format_euro_sum(amount) when is_float(amount) do
+    amount
+    |> Decimal.from_float()
+    |> format_euro_sum()
+  end
+
+  defp format_euro_sum(%Decimal{} = amount) do
+    amount
+    |> Decimal.round(2)
+    |> Decimal.to_string(:normal)
+    |> then(fn str ->
+      case String.split(str, ".") do
+        [int] -> "#{format_thousands(int)},00 €"
+        [int, frac] -> "#{format_thousands(int)},#{String.pad_trailing(frac, 2, "0")} €"
+      end
+    end)
+  end
+
+  defp format_thousands(int_str) do
+    int_str
+    |> String.replace(~r/\A-/, "")
+    |> String.reverse()
+    |> String.replace(~r/(\d{3})(?=\d)/, "\\1.")
+    |> String.reverse()
+    |> then(fn formatted ->
+      if String.starts_with?(int_str, "-"), do: "-" <> formatted, else: formatted
+    end)
+  end
+
   defp reload_eurorack_modules(socket) do
     types =
       case socket.assigns.selected_type do
@@ -390,16 +478,16 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
         type -> [type]
       end
 
+    filter_opts = [
+      q: socket.assigns.search_query,
+      types: types,
+      min_hp: socket.assigns.min_hp,
+      max_hp: socket.assigns.max_hp
+    ]
+
     socket
-    |> assign(
-      :eurorack_modules,
-      Inventory.list_eurorack_modules(
-        q: socket.assigns.search_query,
-        types: types,
-        min_hp: socket.assigns.min_hp,
-        max_hp: socket.assigns.max_hp
-      )
-    )
+    |> assign(:eurorack_modules, Inventory.list_eurorack_modules(filter_opts))
+    |> assign(:inventory_stats, Inventory.inventory_stats(filter_opts))
     |> assign(:filter_types, Inventory.list_used_types())
   end
 
@@ -607,6 +695,22 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
       </datalist>
       <.input field={@form[:name]} type="text" label="Name" disabled={@disabled} />
       <.input field={@form[:hp]} type="number" label="HP" disabled={@disabled} />
+      <.input
+        field={@form[:purchase_price]}
+        type="number"
+        label="Kaufpreis (€)"
+        step="0.01"
+        min="0"
+        disabled={@disabled}
+      />
+      <.input
+        field={@form[:current_value]}
+        type="number"
+        label="Wert (€)"
+        step="0.01"
+        min="0"
+        disabled={@disabled}
+      />
       <.input
         field={@form[:type]}
         type="select"
@@ -1007,4 +1111,9 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
   defp translate_upload_error(:too_many_files), do: "Nur eine PDF-Datei erlaubt"
   defp translate_upload_error(:not_accepted), do: "Nur PDF-Dateien sind erlaubt"
   defp translate_upload_error(other), do: "Upload-Fehler: #{inspect(other)}"
+
+  defp translate_backup_upload_error(:too_large), do: "Datei ist zu gross (max. 100 MB)"
+  defp translate_backup_upload_error(:too_many_files), do: "Nur eine ZIP-Datei erlaubt"
+  defp translate_backup_upload_error(:not_accepted), do: "Nur ZIP-Dateien sind erlaubt"
+  defp translate_backup_upload_error(other), do: "Upload-Fehler: #{inspect(other)}"
 end

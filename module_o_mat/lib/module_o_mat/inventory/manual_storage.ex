@@ -45,6 +45,29 @@ defmodule ModuleOMat.Inventory.ManualStorage do
   end
 
   @doc """
+  Kopiert die Datei mit dem gegebenen Key nach `dest_path`.
+  """
+  def copy_out!(key, dest_path) when is_binary(key) and is_binary(dest_path) do
+    adapter().copy_out!(key, dest_path)
+  end
+
+  @doc """
+  Ersetzt den gesamten Manual-Bestand durch die Dateien aus `source_dir`.
+  Bestehende Dateien werden entfernt; nur regulaere Dateien aus dem
+  Quellverzeichnis werden uebernommen.
+  """
+  def replace_all!(source_dir) when is_binary(source_dir) do
+    adapter().replace_all!(source_dir)
+  end
+
+  @doc """
+  Prueft, ob eine Datei mit dem gegebenen Key existiert.
+  """
+  def exists?(key) when is_binary(key) do
+    adapter().exists?(key)
+  end
+
+  @doc """
   Konfigurierter Storage-Adapter.
   """
   def adapter do

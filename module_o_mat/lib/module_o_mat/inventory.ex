@@ -43,6 +43,54 @@ defmodule ModuleOMat.Inventory do
   end
 
   def list_eurorack_modules(opts) when is_list(opts) do
+    opts
+    |> filtered_eurorack_modules_query()
+    |> order_by([m], asc: m.type, asc: m.manufacturer)
+    |> preload(youtube_videos: ^from(v in YoutubeVideo, order_by: [asc: v.position]))
+    |> Repo.all()
+  end
+
+  @doc """
+  Liefert Aggregat-Statistiken ueber die (optional gefilterten) nicht
+  geloeschten Eurorack-Module.
+
+  Akzeptiert dieselben Keyword-Optionen wie `list_eurorack_modules/1`.
+  Ohne Filter bezieht sich die Statistik auf den gesamten Bestand.
+
+  Liefert eine Map mit:
+
+    * `:count` – Anzahl Module
+    * `:total_hp` – Summe der HP
+    * `:total_purchase_price` – Summe der Kaufpreise (`nil` zaehlt als 0)
+    * `:total_current_value` – Summe der aktuellen Werte (`nil` zaehlt als 0)
+  """
+  def inventory_stats(opts \\ []) when is_list(opts) do
+    result =
+      opts
+      |> filtered_eurorack_modules_query()
+      |> select([m], %{
+        count: count(m.id),
+        total_hp: coalesce(sum(m.hp), 0),
+        total_purchase_price: coalesce(sum(m.purchase_price), 0),
+        total_current_value: coalesce(sum(m.current_value), 0)
+      })
+      |> Repo.one()
+
+    %{
+      count: result.count,
+      total_hp: result.total_hp,
+      total_purchase_price: to_decimal(result.total_purchase_price),
+      total_current_value: to_decimal(result.total_current_value)
+    }
+  end
+
+  defp to_decimal(%Decimal{} = value), do: value
+  defp to_decimal(value) when is_integer(value), do: Decimal.new(value)
+  defp to_decimal(value) when is_float(value), do: Decimal.from_float(value)
+  defp to_decimal(value) when is_binary(value), do: Decimal.new(value)
+  defp to_decimal(nil), do: Decimal.new(0)
+
+  defp filtered_eurorack_modules_query(opts) when is_list(opts) do
     q = opts |> Keyword.get(:q, "") |> to_string() |> String.trim()
     types = opts |> Keyword.get(:types, []) |> List.wrap() |> Enum.reject(&(&1 in [nil, ""]))
     min_hp = positive_integer(Keyword.get(opts, :min_hp))
@@ -54,9 +102,6 @@ defmodule ModuleOMat.Inventory do
     |> maybe_filter_types(types)
     |> maybe_filter_min_hp(min_hp)
     |> maybe_filter_max_hp(max_hp)
-    |> order_by([m], asc: m.type, asc: m.manufacturer)
-    |> preload(youtube_videos: ^from(v in YoutubeVideo, order_by: [asc: v.position]))
-    |> Repo.all()
   end
 
   defp maybe_filter_query(query, ""), do: query
@@ -425,6 +470,22 @@ defmodule ModuleOMat.Inventory do
     eurorack_module
     |> ensure_youtube_videos_loaded()
     |> EurorackModule.changeset(attrs)
+  end
+
+  @doc """
+  Exportiert den aktuellen Inventar-Bestand (ohne Soft-Deletes) inkl.
+  Manual-PDFs als ZIP nach `path`.
+  """
+  def export_backup(path) when is_binary(path) do
+    ModuleOMat.Inventory.Backup.export_to_path(path)
+  end
+
+  @doc """
+  Importiert ein Inventar-Backup aus der ZIP-Datei `path` und ersetzt dabei
+  den gesamten Bestand.
+  """
+  def import_backup(path) when is_binary(path) do
+    ModuleOMat.Inventory.Backup.import_from_path(path)
   end
 
   defp ensure_youtube_videos_loaded(

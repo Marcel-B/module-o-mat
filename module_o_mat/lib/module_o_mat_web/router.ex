@@ -23,6 +23,8 @@ defmodule ModuleOMatWeb.Router do
     live "/eurorack_modules/:id", EurorackModuleLive.Index, :show
     live "/eurorack_modules/:id/edit", EurorackModuleLive.Index, :edit
     live "/module_types", EurorackModuleLive.Index, :manage_types
+    live "/backup", EurorackModuleLive.Index, :backup
+    get "/backup/export", BackupController, :export
   end
 
   # Other scopes may use custom stacks.

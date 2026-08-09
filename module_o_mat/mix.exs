@@ -70,6 +70,7 @@ defmodule ModuleOMat.MixProject do
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
       {:jason, "~> 1.2"},
+      {:nimble_csv, "~> 1.2"},
       {:dns_cluster, "~> 0.2.0"},
       {:bandit, "~> 1.5"},
       {:ex_doc, "~> 0.40", only: :dev, runtime: false},

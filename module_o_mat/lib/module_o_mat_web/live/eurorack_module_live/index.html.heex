@@ -6,6 +6,9 @@
       </h1>
 
       <div class="flex flex-none gap-2">
+        <.link patch={~p"/backup"} id="backup-button" class="btn">
+          Datensicherung
+        </.link>
         <.link patch={~p"/module_types"} id="manage-module-types-button" class="btn">
           Typen verwalten
         </.link>
@@ -113,6 +116,8 @@
       <tr>
         <th>Modul</th>
         <th class="w-14 whitespace-nowrap">HP</th>
+        <th class="w-24 text-right whitespace-nowrap">Kaufpreis</th>
+        <th class="w-24 text-right whitespace-nowrap">Wert</th>
         <th class="w-60 text-right whitespace-nowrap">Aktionen</th>
       </tr>
     </thead>
@@ -121,7 +126,7 @@
       id={"eurorack-modules-#{hd(group).type}"}
     >
       <tr class="border-0 hover:bg-primary/20">
-        <td colspan="3" class="bg-primary/20 font-semibold py-2">
+        <td colspan="5" class="bg-primary/20 font-semibold py-2">
           {hd(group).type}
           <span class="text-base-content/60 font-normal">({length(group)})</span>
         </td>
@@ -135,6 +140,12 @@
           {eurorack_module.manufacturer} - {eurorack_module.name}
         </td>
         <td class="w-14 whitespace-nowrap">{eurorack_module.hp}</td>
+        <td class="w-24 text-right whitespace-nowrap tabular-nums">
+          {format_euro(eurorack_module.purchase_price)}
+        </td>
+        <td class="w-24 text-right whitespace-nowrap tabular-nums">
+          {format_euro(eurorack_module.current_value)}
+        </td>
         <td class="w-60 whitespace-nowrap">
           <div class="flex shrink-0 gap-1 justify-end">
             <%= if eurorack_module.manual_pdf_key do %>
@@ -195,6 +206,22 @@
         </td>
       </tr>
     </tbody>
+    <tfoot id="inventory-stats">
+      <tr class="border-t-2 border-base-300 font-semibold">
+        <td class="py-2">
+          {@inventory_stats.count}
+          {if @inventory_stats.count == 1, do: "Modul", else: "Module"}
+        </td>
+        <td class="w-14 whitespace-nowrap tabular-nums">{@inventory_stats.total_hp}</td>
+        <td class="w-24 text-right whitespace-nowrap tabular-nums">
+          {format_euro_sum(@inventory_stats.total_purchase_price)}
+        </td>
+        <td class="w-24 text-right whitespace-nowrap tabular-nums">
+          {format_euro_sum(@inventory_stats.total_current_value)}
+        </td>
+        <td class="w-60"></td>
+      </tr>
+    </tfoot>
   </table>
 
   <script :type={Phoenix.LiveView.ColocatedHook} name=".YoutubePreview">
@@ -433,6 +460,99 @@
         </.button>
       </div>
     </.form>
+  </.modal>
+
+  <.modal :if={@live_action == :backup} id="backup-modal">
+    <:title>Datensicherung</:title>
+
+    <div class="space-y-6">
+      <section id="backup-export-section" class="space-y-2">
+        <h4 class="font-semibold text-sm">Export</h4>
+        <p class="text-base-content/70 text-sm">
+          Exportiert alle Module, Typen, YouTube-Videos und PDF-Anleitungen als ZIP-Datei.
+          Soft-geloeschte Eintraege sind nicht enthalten.
+        </p>
+        <.link
+          href={~p"/backup/export"}
+          id="export-backup-button"
+          class="btn btn-primary"
+        >
+          <.icon name="hero-arrow-down-tray" class="size-4" /> Backup herunterladen
+        </.link>
+      </section>
+
+      <section id="backup-import-section" class="space-y-2">
+        <h4 class="font-semibold text-sm">Import</h4>
+        <p class="text-base-content/70 text-sm">
+          Stellt ein zuvor erstelltes Backup wieder her.
+          <strong>Alle vorhandenen Daten werden dabei ersetzt.</strong>
+        </p>
+
+        <form
+          id="backup-import-form"
+          phx-change="validate_backup"
+          phx-submit="import_backup"
+          class="space-y-3"
+        >
+          <div
+            class="border border-dashed border-base-300 rounded-lg p-4 text-center"
+            phx-drop-target={@uploads.backup.ref}
+          >
+            <p class="text-sm text-base-content/70 mb-2">
+              ZIP hierher ziehen oder Datei auswaehlen
+            </p>
+            <.live_file_input
+              upload={@uploads.backup}
+              class="file-input file-input-bordered file-input-sm w-full max-w-xs"
+            />
+          </div>
+
+          <div
+            :for={entry <- @uploads.backup.entries}
+            id={"backup-upload-entry-#{entry.ref}"}
+            class="flex items-center gap-2 text-sm"
+          >
+            <span class="truncate">{entry.client_name}</span>
+            <span class="text-base-content/50">{entry.progress}%</span>
+            <button
+              type="button"
+              id={"cancel-backup-upload-#{entry.ref}"}
+              class="btn btn-ghost btn-xs"
+              phx-click="cancel_backup_upload"
+              phx-value-ref={entry.ref}
+            >
+              Abbrechen
+            </button>
+          </div>
+
+          <p
+            :for={err <- upload_errors(@uploads.backup)}
+            class="flex gap-2 items-center text-sm text-error"
+          >
+            <.icon name="hero-exclamation-circle" class="size-5" />
+            {translate_backup_upload_error(err)}
+          </p>
+          <div :for={entry <- @uploads.backup.entries}>
+            <p
+              :for={err <- upload_errors(@uploads.backup, entry)}
+              class="flex gap-2 items-center text-sm text-error"
+            >
+              <.icon name="hero-exclamation-circle" class="size-5" />
+              {translate_backup_upload_error(err)}
+            </p>
+          </div>
+
+          <div class="flex gap-2 justify-end pt-2">
+            <.link patch={~p"/"} id="close-backup-button" class="btn">
+              Schliessen
+            </.link>
+            <.button type="submit" variant="primary" id="import-backup-button">
+              Backup importieren
+            </.button>
+          </div>
+        </form>
+      </section>
+    </div>
   </.modal>
 
   <.modal :if={@module_to_delete} id="delete-eurorack-module-modal">
