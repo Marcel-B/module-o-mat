@@ -1,0 +1,84 @@
+<Layouts.app flash={@flash}>
+  <.header>
+    Eurorack-Module
+    <:actions>
+      <.link
+        patch={~p"/eurorack_modules/new"}
+        id="new-eurorack-module-button"
+        class="btn btn-primary"
+      >
+        Neues Modul
+      </.link>
+    </:actions>
+  </.header>
+
+  <p :if={@eurorack_modules == []} id="no-eurorack-modules" class="text-base-content/70">
+    Es sind noch keine Module erfasst.
+  </p>
+
+  <div :for={group <- grouped_eurorack_modules(@eurorack_modules)} class="mb-8">
+    <h2 class="text-base font-semibold mb-2">
+      {type_label(hd(group).type)}
+      <span class="text-base-content/50 font-normal">({length(group)})</span>
+    </h2>
+
+    <table class="table table-zebra" id={"eurorack-modules-#{hd(group).type}"}>
+      <thead>
+        <tr>
+          <th>Hersteller</th>
+          <th>Modul</th>
+          <th>Typ</th>
+          <th>HP</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr :for={eurorack_module <- group} id={"eurorack-module-#{eurorack_module.id}"}>
+          <td>{eurorack_module.manufacturer}</td>
+          <td>{eurorack_module.name}</td>
+          <td>{type_label(eurorack_module.type)}</td>
+          <td>{eurorack_module.hp}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <.modal :if={@live_action == :new} id="eurorack-module-modal">
+    <:title>Neues Modul erfassen</:title>
+
+    <.form for={@form} id="eurorack-module-form" phx-change="validate" phx-submit="save">
+      <.input field={@form[:manufacturer]} type="text" label="Hersteller" />
+      <.input field={@form[:name]} type="text" label="Name" />
+      <.input field={@form[:hp]} type="number" label="HP" />
+      <.input
+        field={@form[:type]}
+        type="select"
+        label="Typ"
+        prompt="Bitte waehlen"
+        options={EurorackModule.type_options()}
+      />
+      <.input
+        field={@form[:current_draw_plus12v_ma]}
+        type="number"
+        label="Strombedarf +12V (mA)"
+      />
+      <.input
+        field={@form[:current_draw_minus12v_ma]}
+        type="number"
+        label="Strombedarf -12V (mA)"
+      />
+      <.input field={@form[:current_draw_plus5v_ma]} type="number" label="Strombedarf +5V (mA)" />
+      <.input field={@form[:depth_mm]} type="number" label="Tiefe (mm)" />
+      <.input field={@form[:description]} type="textarea" label="Beschreibung" />
+      <.input field={@form[:manual_url]} type="text" label="Anleitung / Produktseite (URL)" />
+
+      <div class="flex gap-2 justify-end mt-4">
+        <.link patch={~p"/"} id="cancel-eurorack-module-button" class="btn">
+          Abbrechen
+        </.link>
+        <.button type="submit" variant="primary" id="save-eurorack-module-button">
+          Speichern
+        </.button>
+      </div>
+    </.form>
+  </.modal>
+</Layouts.app>

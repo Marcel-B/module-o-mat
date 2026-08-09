@@ -39,10 +39,10 @@ defmodule ModuleOMat.InventoryTest do
       assert {:error, changeset} = Inventory.create_eurorack_module(%{})
 
       errors = errors_on(changeset)
-      assert "can't be blank" in errors.manufacturer
-      assert "can't be blank" in errors.name
-      assert "can't be blank" in errors.hp
-      assert "can't be blank" in errors.type
+      assert "muss ausgefuellt werden" in errors.manufacturer
+      assert "muss ausgefuellt werden" in errors.name
+      assert "muss ausgefuellt werden" in errors.hp
+      assert "muss ausgefuellt werden" in errors.type
     end
 
     test "liefert einen Fehler bei ungueltigem type" do
@@ -56,14 +56,14 @@ defmodule ModuleOMat.InventoryTest do
       attrs = valid_eurorack_module_attrs(%{hp: 0})
 
       assert {:error, changeset} = Inventory.create_eurorack_module(attrs)
-      assert "must be greater than 0" in errors_on(changeset).hp
+      assert "muss groesser als 0 sein" in errors_on(changeset).hp
     end
 
     test "liefert einen Fehler bei negativem Strombedarf" do
       attrs = valid_eurorack_module_attrs(%{current_draw_plus12v_ma: -10})
 
       assert {:error, changeset} = Inventory.create_eurorack_module(attrs)
-      assert "must be greater than or equal to 0" in errors_on(changeset).current_draw_plus12v_ma
+      assert "darf nicht negativ sein" in errors_on(changeset).current_draw_plus12v_ma
     end
   end
 
@@ -81,6 +81,18 @@ defmodule ModuleOMat.InventoryTest do
 
     test "liefert eine leere Liste, wenn keine Module existieren" do
       assert Inventory.list_eurorack_modules() == []
+    end
+
+    test "sortiert nach Typ und innerhalb eines Typs nach Hersteller" do
+      eurorack_module_fixture(%{manufacturer: "Mutable Instruments", name: "Plaits", type: :vco})
+      eurorack_module_fixture(%{manufacturer: "Make Noise", name: "STO", type: :vco})
+      eurorack_module_fixture(%{manufacturer: "Doepfer", name: "A-140", type: :envelope})
+
+      assert Inventory.list_eurorack_modules() |> Enum.map(&{&1.type, &1.manufacturer}) == [
+               {:envelope, "Doepfer"},
+               {:vco, "Make Noise"},
+               {:vco, "Mutable Instruments"}
+             ]
     end
   end
 
@@ -117,7 +129,7 @@ defmodule ModuleOMat.InventoryTest do
       eurorack_module = eurorack_module_fixture()
 
       assert {:error, changeset} = Inventory.update_eurorack_module(eurorack_module, %{hp: -5})
-      assert "must be greater than 0" in errors_on(changeset).hp
+      assert "muss groesser als 0 sein" in errors_on(changeset).hp
 
       assert Inventory.get_eurorack_module!(eurorack_module.id).hp == eurorack_module.hp
     end

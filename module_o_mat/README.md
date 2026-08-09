@@ -1,7 +1,7 @@
 # ModuleOMat
 
-Eine Elixir-Anwendung zur Erfassung von Eurorack-Modulen (Hersteller, Name,
-HP-Breite, Typ, Strombedarf, u.v.m.).
+Eine Elixir/Phoenix-Anwendung zur Erfassung von Eurorack-Modulen (Hersteller,
+Name, HP-Breite, Typ, Strombedarf, u.v.m.).
 
 ## Architektur
 
@@ -12,6 +12,9 @@ HP-Breite, Typ, Strombedarf, u.v.m.).
   `create_eurorack_module/1`, ...).
 - `ModuleOMat.Repo` – Ecto-Repo mit SQLite3-Adapter (`ecto_sqlite3`) zur
   Persistierung.
+- `ModuleOMatWeb.EurorackModuleLive.Index` – Phoenix-LiveView, zeigt die
+  erfassten Module gruppiert nach Typ (sortiert nach Hersteller) an und
+  erlaubt das Anlegen neuer Module über einen Dialog mit Validierung.
 
 ## Setup
 
@@ -19,8 +22,17 @@ HP-Breite, Typ, Strombedarf, u.v.m.).
 mix setup
 ```
 
-Legt die Dependencies an und richtet die SQLite-Datenbank ein (erstellen +
-migrieren).
+Legt die Dependencies an, richtet die SQLite-Datenbank ein (erstellen +
+migrieren) und installiert/baut die Assets (Tailwind/esbuild).
+
+## Anwendung starten
+
+```bash
+mix phx.server
+```
+
+Die Oberfläche ist danach unter [http://localhost:4000](http://localhost:4000)
+erreichbar.
 
 ## Tests
 
