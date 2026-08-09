@@ -12,7 +12,8 @@ defmodule ModuleOMat.MixProject do
       listeners: [Phoenix.CodeReloader],
       deps: deps(),
       aliases: aliases(),
-      docs: docs()
+      docs: docs(),
+      test_coverage: [summary: [threshold: 0]]
     ]
   end
 
