@@ -26,6 +26,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
      |> assign(:module_type_form, to_form(Inventory.change_module_type(%ModuleType{})))
      |> assign(:editing_module_type, nil)
      |> assign(:module_type_edit_form, nil)
+     |> assign(:price_chart_data, nil)
      |> allow_upload(:manual,
        accept: ~w(.pdf),
        max_entries: 1,
@@ -50,6 +51,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
     |> assign(:page_title, "Neues Modul erfassen")
     |> assign(:eurorack_module, eurorack_module)
     |> assign(:form, to_form(Inventory.change_eurorack_module(eurorack_module)))
+    |> assign(:price_chart_data, nil)
   end
 
   defp apply_action(socket, :edit, %{"id" => id}) do
@@ -59,6 +61,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
     |> assign(:page_title, "Modul bearbeiten")
     |> assign(:eurorack_module, eurorack_module)
     |> assign(:form, to_form(Inventory.change_eurorack_module(eurorack_module)))
+    |> assign(:price_chart_data, nil)
   end
 
   defp apply_action(socket, :show, %{"id" => id}) do
@@ -68,6 +71,20 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
     |> assign(:page_title, "Modul anzeigen")
     |> assign(:eurorack_module, eurorack_module)
     |> assign(:form, to_form(Inventory.change_eurorack_module(eurorack_module)))
+    |> assign(:price_chart_data, nil)
+  end
+
+  defp apply_action(socket, :price_history, %{"id" => id}) do
+    eurorack_module = Inventory.get_module_for_valuation!(id)
+
+    socket
+    |> assign(
+      :page_title,
+      "Preisverlauf: #{eurorack_module.manufacturer} - #{eurorack_module.name}"
+    )
+    |> assign(:eurorack_module, eurorack_module)
+    |> assign(:form, nil)
+    |> assign(:price_chart_data, build_price_chart_data(eurorack_module.price_observations))
   end
 
   defp apply_action(socket, :manage_types, _params) do
@@ -78,6 +95,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
     |> assign(:module_type_form, to_form(Inventory.change_module_type(%ModuleType{})))
     |> assign(:editing_module_type, nil)
     |> assign(:module_type_edit_form, nil)
+    |> assign(:price_chart_data, nil)
   end
 
   defp apply_action(socket, :backup, _params) do
@@ -85,6 +103,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
     |> assign(:page_title, "Datensicherung")
     |> assign(:eurorack_module, nil)
     |> assign(:form, nil)
+    |> assign(:price_chart_data, nil)
   end
 
   defp apply_action(socket, :index, _params) do
@@ -92,6 +111,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
     |> assign(:page_title, "Eurorack-Module")
     |> assign(:eurorack_module, nil)
     |> assign(:form, nil)
+    |> assign(:price_chart_data, nil)
   end
 
   @impl true
@@ -455,6 +475,36 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
       "#{format_euro_amount(min)}–#{format_euro(max)}"
     end
   end
+
+  defp build_price_chart_data(observations) when is_list(observations) do
+    observations = Enum.sort_by(observations, &{&1.observed_on, &1.id}, :asc)
+
+    labels =
+      observations
+      |> Enum.map(&Date.to_iso8601(&1.observed_on))
+      |> Enum.uniq()
+
+    datasets =
+      observations
+      |> Enum.group_by(& &1.source)
+      |> Enum.map(fn {source, source_observations} ->
+        points =
+          Enum.map(source_observations, fn observation ->
+            %{
+              x: Date.to_iso8601(observation.observed_on),
+              y: decimal_to_number(observation.amount),
+              source: source
+            }
+          end)
+
+        %{source: source, points: points}
+      end)
+      |> Enum.sort_by(& &1.source)
+
+    %{labels: labels, datasets: datasets}
+  end
+
+  defp decimal_to_number(%Decimal{} = amount), do: Decimal.to_float(amount)
 
   defp price_range_title(nil), do: nil
 

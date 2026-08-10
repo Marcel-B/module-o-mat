@@ -20,6 +20,7 @@ defmodule ModuleOMatWeb.Router do
     live "/", EurorackModuleLive.Index, :index
     live "/eurorack_modules/new", EurorackModuleLive.Index, :new
     get "/eurorack_modules/:id/manual", ManualController, :show
+    live "/eurorack_modules/:id/price_history", EurorackModuleLive.Index, :price_history
     live "/eurorack_modules/:id", EurorackModuleLive.Index, :show
     live "/eurorack_modules/:id/edit", EurorackModuleLive.Index, :edit
     live "/module_types", EurorackModuleLive.Index, :manage_types
