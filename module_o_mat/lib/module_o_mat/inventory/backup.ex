@@ -12,12 +12,14 @@ defmodule ModuleOMat.Inventory.Backup do
   alias ModuleOMat.Inventory.Backup.CSV
   alias ModuleOMat.Inventory.EurorackModule
   alias ModuleOMat.Inventory.ManualStorage
+  alias ModuleOMat.Inventory.ModulePriceObservation
   alias ModuleOMat.Inventory.ModuleType
   alias ModuleOMat.Inventory.YoutubeVideo
 
   @module_types_file "module_types.csv"
   @modules_file "eurorack_modules.csv"
   @videos_file "youtube_videos.csv"
+  @observations_file "module_price_observations.csv"
   @manuals_dir "manuals"
 
   @module_type_headers ~w(id name inserted_at updated_at)
@@ -29,6 +31,10 @@ defmodule ModuleOMat.Inventory.Backup do
     inserted_at updated_at
   )
   @video_headers ~w(id eurorack_module_id url position inserted_at updated_at)
+  @observation_headers ~w(
+    id eurorack_module_id amount currency source source_url observed_on notes
+    inserted_at updated_at
+  )
 
   @doc """
   Schreibt ein Inventar-Backup als ZIP nach `path`.
@@ -72,9 +78,13 @@ defmodule ModuleOMat.Inventory.Backup do
         types = read_csv!(content_root, @module_types_file, @module_type_headers)
         modules = read_csv!(content_root, @modules_file, @module_headers)
         videos = read_csv!(content_root, @videos_file, @video_headers)
+
+        observations =
+          read_optional_csv!(content_root, @observations_file, @observation_headers)
+
         manuals_source = ensure_manuals_dir!(content_root)
 
-        case replace_database(types, modules, videos) do
+        case replace_database(types, modules, videos, observations) do
           {:ok, _} ->
             ManualStorage.replace_all!(manuals_source)
             :ok
@@ -95,10 +105,18 @@ defmodule ModuleOMat.Inventory.Backup do
     module_ids = Enum.map(modules, & &1.id)
     types = Repo.all(from(t in ModuleType, order_by: [asc: t.id]))
     videos = list_videos_for_modules(module_ids)
+    observations = list_observations_for_modules(module_ids)
 
     write_csv!(tmp_root, @module_types_file, @module_type_headers, Enum.map(types, &type_row/1))
     write_csv!(tmp_root, @modules_file, @module_headers, Enum.map(modules, &module_row/1))
     write_csv!(tmp_root, @videos_file, @video_headers, Enum.map(videos, &video_row/1))
+
+    write_csv!(
+      tmp_root,
+      @observations_file,
+      @observation_headers,
+      Enum.map(observations, &observation_row/1)
+    )
   end
 
   defp list_active_modules do
@@ -114,6 +132,15 @@ defmodule ModuleOMat.Inventory.Backup do
     YoutubeVideo
     |> where([v], v.eurorack_module_id in ^module_ids)
     |> order_by([v], asc: v.id)
+    |> Repo.all()
+  end
+
+  defp list_observations_for_modules([]), do: []
+
+  defp list_observations_for_modules(module_ids) do
+    ModulePriceObservation
+    |> where([o], o.eurorack_module_id in ^module_ids)
+    |> order_by([o], asc: o.id)
     |> Repo.all()
   end
 
@@ -179,8 +206,24 @@ defmodule ModuleOMat.Inventory.Backup do
     ]
   end
 
+  defp observation_row(%ModulePriceObservation{} = o) do
+    [
+      to_csv(o.id),
+      to_csv(o.eurorack_module_id),
+      to_csv(o.amount),
+      to_csv(o.currency),
+      to_csv(o.source),
+      to_csv(o.source_url),
+      to_csv(o.observed_on),
+      to_csv(o.notes),
+      to_csv(o.inserted_at),
+      to_csv(o.updated_at)
+    ]
+  end
+
   defp to_csv(nil), do: ""
   defp to_csv(%Decimal{} = value), do: Decimal.to_string(value, :normal)
+  defp to_csv(%Date{} = value), do: Date.to_iso8601(value)
   defp to_csv(%DateTime{} = value), do: DateTime.to_iso8601(value)
   defp to_csv(%NaiveDateTime{} = value), do: NaiveDateTime.to_iso8601(value)
   defp to_csv(value) when is_binary(value), do: value
@@ -253,6 +296,21 @@ defmodule ModuleOMat.Inventory.Backup do
       raise "Pflicht-Datei fehlt im Backup: #{filename}"
     end
 
+    parse_csv_path!(path, filename, expected_headers)
+  end
+
+  # Aeltere Backups ohne Preisbeobachtungen bleiben importierbar.
+  defp read_optional_csv!(tmp_root, filename, expected_headers) do
+    path = Path.join(tmp_root, filename)
+
+    if File.regular?(path) do
+      parse_csv_path!(path, filename, expected_headers)
+    else
+      []
+    end
+  end
+
+  defp parse_csv_path!(path, filename, expected_headers) do
     path
     |> File.stream!()
     |> CSV.parse_stream(skip_headers: false)
@@ -280,8 +338,9 @@ defmodule ModuleOMat.Inventory.Backup do
     path
   end
 
-  defp replace_database(types, modules, videos) do
+  defp replace_database(types, modules, videos, observations) do
     Repo.transaction(fn ->
+      Repo.delete_all(ModulePriceObservation)
       Repo.delete_all(YoutubeVideo)
       Repo.delete_all(EurorackModule)
       Repo.delete_all(ModuleType)
@@ -289,10 +348,12 @@ defmodule ModuleOMat.Inventory.Backup do
       Enum.each(types, &insert_module_type!/1)
       Enum.each(modules, &insert_module!/1)
       Enum.each(videos, &insert_video!/1)
+      Enum.each(observations, &insert_observation!/1)
 
       reset_sqlite_sequence!("module_types")
       reset_sqlite_sequence!("eurorack_modules")
       reset_sqlite_sequence!("youtube_videos")
+      reset_sqlite_sequence!("module_price_observations")
 
       :ok
     end)
@@ -363,6 +424,25 @@ defmodule ModuleOMat.Inventory.Backup do
     })
   end
 
+  defp insert_observation!(row) do
+    Repo.insert!(%ModulePriceObservation{
+      id: parse_integer!(row["id"], "module_price_observations.id"),
+      eurorack_module_id:
+        parse_integer!(
+          row["eurorack_module_id"],
+          "module_price_observations.eurorack_module_id"
+        ),
+      amount: parse_required_decimal!(row["amount"], "module_price_observations.amount"),
+      currency: parse_currency(row["currency"]),
+      source: required_string!(row["source"], "module_price_observations.source"),
+      source_url: empty_to_nil(row["source_url"]),
+      observed_on: parse_date!(row["observed_on"], "module_price_observations.observed_on"),
+      notes: empty_to_nil(row["notes"]),
+      inserted_at: parse_datetime!(row["inserted_at"], "module_price_observations.inserted_at"),
+      updated_at: parse_datetime!(row["updated_at"], "module_price_observations.updated_at")
+    })
+  end
+
   defp parse_subtypes(nil), do: []
   defp parse_subtypes(""), do: []
 
@@ -383,6 +463,10 @@ defmodule ModuleOMat.Inventory.Backup do
       string -> string
     end
   end
+
+  defp parse_currency(nil), do: "EUR"
+  defp parse_currency(""), do: "EUR"
+  defp parse_currency(value), do: String.trim(to_string(value))
 
   defp parse_integer!(value, field) do
     case Integer.parse(value |> to_string() |> String.trim()) do
@@ -408,6 +492,28 @@ defmodule ModuleOMat.Inventory.Backup do
     case Decimal.parse(value |> to_string() |> String.trim()) do
       {decimal, ""} -> decimal
       _ -> raise "Ungueltiger Dezimalwert: #{inspect(value)}"
+    end
+  end
+
+  defp parse_required_decimal!(value, field) do
+    case empty_to_nil(value) do
+      nil ->
+        raise "Pflichtfeld fehlt: #{field}"
+
+      string ->
+        case Decimal.parse(string |> to_string() |> String.trim()) do
+          {decimal, ""} -> decimal
+          _ -> raise "Ungueltiger Dezimalwert in #{field}: #{inspect(value)}"
+        end
+    end
+  end
+
+  defp parse_date!(value, field) do
+    value = value |> to_string() |> String.trim()
+
+    case Date.from_iso8601(value) do
+      {:ok, date} -> date
+      {:error, _} -> raise "Ungueltiges Datum in #{field}: #{inspect(value)}"
     end
   end
 
