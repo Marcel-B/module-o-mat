@@ -668,6 +668,107 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
     end
   end
 
+  describe "Aktionsmenue" do
+    test "buendelt Preisverlauf, Bearbeiten, Duplizieren und Loeschen im Menue", %{conn: conn} do
+      eurorack_module = eurorack_module_fixture()
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      assert has_element?(view, "#actions-menu-eurorack-module-#{eurorack_module.id}")
+      assert has_element?(view, "#price-history-eurorack-module-#{eurorack_module.id}")
+      assert has_element?(view, "#edit-eurorack-module-#{eurorack_module.id}")
+      assert has_element?(view, "#duplicate-eurorack-module-#{eurorack_module.id}")
+      assert has_element?(view, "#delete-eurorack-module-#{eurorack_module.id}")
+      assert has_element?(view, "#show-eurorack-module-#{eurorack_module.id}")
+    end
+  end
+
+  describe "Modul duplizieren" do
+    @pdf_fixture Path.expand("../../../support/fixtures/files/sample.pdf", __DIR__)
+
+    test "oeffnet den Dialog mit vorausgefuellten Feldern und Speichern-Button", %{conn: conn} do
+      eurorack_module =
+        eurorack_module_fixture(%{
+          manufacturer: "Make Noise",
+          name: "Maths",
+          purchase_price: "250.00",
+          current_value: "300.00",
+          youtube_videos: [%{url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ"}]
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      view
+      |> element("#duplicate-eurorack-module-#{eurorack_module.id}")
+      |> render_click()
+
+      assert_patch(view, ~p"/eurorack_modules/#{eurorack_module.id}/duplicate")
+
+      html = render(view)
+      assert html =~ "Modul duplizieren"
+      assert has_element?(view, "#eurorack-module-form")
+      assert has_element?(view, "#eurorack-module-form input[value='Maths']")
+      assert has_element?(view, "#save-eurorack-module-button", "Speichern")
+      refute has_element?(view, "#save-eurorack-module-button", "Aktualisieren")
+    end
+
+    test "legt beim Speichern ein neues Modul an und laesst Quelle sowie Werte unveraendert", %{
+      conn: conn
+    } do
+      source =
+        eurorack_module_fixture(%{
+          manufacturer: "Make Noise",
+          name: "Maths",
+          purchase_price: "250.00",
+          current_value: "300.00",
+          youtube_videos: [%{url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ"}]
+        })
+
+      {:ok, with_manual} =
+        Inventory.attach_manual(source, %{
+          tmp_path: @pdf_fixture,
+          filename: "maths.pdf",
+          content_type: "application/pdf",
+          size: File.stat!(@pdf_fixture).size
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/eurorack_modules/#{with_manual.id}/duplicate")
+
+      html =
+        view
+        |> form("#eurorack-module-form", eurorack_module: %{purchase_price: "199.00"})
+        |> render_submit()
+
+      assert_patch(view, ~p"/")
+      refute has_element?(view, "#eurorack-module-modal")
+      assert html =~ "wurde gespeichert"
+
+      modules = Inventory.list_eurorack_modules()
+      assert length(modules) == 2
+
+      duplicate = Enum.find(modules, &(&1.id != with_manual.id))
+      source_after = Inventory.get_eurorack_module!(with_manual.id)
+      duplicate = Inventory.get_eurorack_module!(duplicate.id)
+
+      assert source_after.name == "Maths"
+      assert Decimal.eq?(source_after.purchase_price, Decimal.new("250.00"))
+      assert source_after.manual_pdf_key == with_manual.manual_pdf_key
+
+      assert duplicate.name == "Maths"
+      assert Decimal.eq?(duplicate.purchase_price, Decimal.new("199.00"))
+      assert Decimal.eq?(duplicate.current_value, Decimal.new("300.00"))
+      assert duplicate.manual_pdf_key
+      assert duplicate.manual_pdf_key != with_manual.manual_pdf_key
+      assert duplicate.manual_pdf_filename == "maths.pdf"
+
+      duplicate = ModuleOMat.Repo.preload(duplicate, :youtube_videos)
+
+      assert Enum.map(duplicate.youtube_videos, & &1.url) == [
+               "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+             ]
+    end
+  end
+
   describe "Modul loeschen" do
     test "zeigt eine Sicherheitsabfrage beim Klick auf 'Loeschen' an", %{conn: conn} do
       eurorack_module = eurorack_module_fixture(%{name: "Maths"})
