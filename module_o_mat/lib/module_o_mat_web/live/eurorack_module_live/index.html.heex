@@ -179,6 +179,15 @@
             <% end %>
             <.youtube_play_button eurorack_module={eurorack_module} />
             <.link
+              patch={~p"/eurorack_modules/#{eurorack_module.id}/price_history"}
+              id={"price-history-eurorack-module-#{eurorack_module.id}"}
+              class="btn btn-ghost btn-xs"
+              title="Preisverlauf"
+              aria-label="Preisverlauf"
+            >
+              <.icon name="hero-presentation-chart-line" />
+            </.link>
+            <.link
               patch={~p"/eurorack_modules/#{eurorack_module.id}"}
               id={"show-eurorack-module-#{eurorack_module.id}"}
               class="btn btn-ghost btn-xs"
@@ -305,6 +314,38 @@
       }
     }
   </script>
+
+  <.modal
+    :if={@live_action == :price_history}
+    id="price-history-modal"
+    box_class="max-w-3xl w-full max-h-[calc(100vh-5em)] flex flex-col overflow-hidden"
+  >
+    <:title>{@page_title}</:title>
+
+    <div id="price-history-content" class="flex min-h-0 flex-1 flex-col gap-4">
+      <%= if @price_chart_data && @price_chart_data.datasets != [] do %>
+        <div
+          id="price-history-chart"
+          class="relative h-80 w-full"
+          phx-hook="PriceHistoryChart"
+          phx-update="ignore"
+          data-chart={Jason.encode!(@price_chart_data)}
+        >
+          <canvas id="price-history-canvas" aria-label="Preisverlaufsdiagramm"></canvas>
+        </div>
+      <% else %>
+        <p id="price-history-empty" class="text-base-content/70 text-sm">
+          Fuer dieses Modul liegen noch keine Preisbeobachtungen vor.
+        </p>
+      <% end %>
+
+      <div class="flex shrink-0 gap-2 justify-end pt-2">
+        <.link patch={~p"/"} id="close-price-history-button" class="btn">
+          Schliessen
+        </.link>
+      </div>
+    </div>
+  </.modal>
 
   <.modal
     :if={@live_action in [:new, :edit, :show]}

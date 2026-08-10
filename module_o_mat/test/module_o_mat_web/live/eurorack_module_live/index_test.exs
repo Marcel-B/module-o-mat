@@ -101,6 +101,65 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
       assert has_element?(view, "#eurorack-module-#{module.id}", "150,00–210,00 €")
     end
 
+    test "oeffnet den Preisverlauf-Dialog mit Chart-Daten pro Quelle", %{conn: conn} do
+      module =
+        eurorack_module_fixture(%{
+          manufacturer: "Make Noise",
+          name: "Maths",
+          current_value: "120.00"
+        })
+
+      {:ok, _} =
+        Inventory.create_price_observations(module, [
+          %{amount: "150.00", source: "ebay_sold", observed_on: ~D[2026-08-01]},
+          %{amount: "210.00", source: "shop", observed_on: ~D[2026-08-03]},
+          %{amount: "180.00", source: "ebay_sold", observed_on: ~D[2026-08-05]}
+        ])
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      assert has_element?(view, "#price-history-eurorack-module-#{module.id}")
+
+      view
+      |> element("#price-history-eurorack-module-#{module.id}")
+      |> render_click()
+
+      assert_patch(view, ~p"/eurorack_modules/#{module.id}/price_history")
+      assert has_element?(view, "#price-history-modal")
+      assert has_element?(view, "#price-history-chart")
+      assert has_element?(view, "#price-history-canvas")
+      refute has_element?(view, "#price-history-empty")
+
+      chart_json =
+        view
+        |> element("#price-history-chart")
+        |> render()
+        |> LazyHTML.from_fragment()
+        |> LazyHTML.attribute("data-chart")
+        |> List.first()
+
+      chart_data = Jason.decode!(chart_json)
+
+      assert chart_data["labels"] == ["2026-08-01", "2026-08-03", "2026-08-05"]
+
+      sources = Enum.map(chart_data["datasets"], & &1["source"])
+      assert sources == ["ebay_sold", "shop"]
+    end
+
+    test "zeigt im Preisverlauf-Dialog einen Leerzustand ohne Beobachtungen", %{conn: conn} do
+      module =
+        eurorack_module_fixture(%{
+          manufacturer: "Make Noise",
+          name: "Maths"
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/eurorack_modules/#{module.id}/price_history")
+
+      assert has_element?(view, "#price-history-modal")
+      assert has_element?(view, "#price-history-empty")
+      refute has_element?(view, "#price-history-chart")
+    end
+
     test "aktualisiert die Fusszeilen-Statistik bei aktivem Filter", %{conn: conn} do
       eurorack_module_fixture(%{
         manufacturer: "Make Noise",
