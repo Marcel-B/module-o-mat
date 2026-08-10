@@ -1,9 +1,20 @@
 #!/bin/sh
 set -eu
 
-mkdir -p "$(dirname "${DATABASE_PATH:-/data/module_o_mat.db}")" \
-  "${MANUAL_UPLOADS_DIR:-/data/uploads/manuals}"
+data_dir="$(dirname "${DATABASE_PATH:-/data/module_o_mat.db}")"
+uploads_dir="${MANUAL_UPLOADS_DIR:-/data/uploads/manuals}"
+
+mkdir -p "$data_dir" "$uploads_dir"
 
 cd -P -- "$(dirname -- "$0")"
+
+# Named volumes are often root-owned and hide the image's /data permissions.
+# Fix ownership, then drop privileges before migrate/start.
+if [ "$(id -u)" = "0" ]; then
+  chown -R nobody:nogroup /data
+  runuser -u nobody -- ./migrate
+  exec runuser -u nobody -- env PHX_SERVER=true ./module_o_mat start
+fi
+
 ./migrate
 PHX_SERVER=true exec ./module_o_mat start

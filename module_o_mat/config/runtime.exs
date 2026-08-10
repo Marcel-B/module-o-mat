@@ -64,11 +64,22 @@ if config_env() == :prod do
       """
 
   host = System.get_env("PHX_HOST") || "example.com"
+  scheme = System.get_env("PHX_SCHEME") || "https"
+
+  # Public URL port: for http use the host-mapped port (PHX_PORT), for https default 443.
+  url_port =
+    case scheme do
+      "http" ->
+        String.to_integer(System.get_env("PHX_PORT") || System.get_env("PORT") || "4000")
+
+      _ ->
+        String.to_integer(System.get_env("PHX_PORT") || "443")
+    end
 
   config :module_o_mat, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
   config :module_o_mat, ModuleOMatWeb.Endpoint,
-    url: [host: host, port: 443, scheme: "https"],
+    url: [host: host, port: url_port, scheme: scheme],
     http: [
       # Enable IPv6 and bind on all interfaces.
       # Set it to  {0, 0, 0, 0, 0, 0, 0, 1} for local network only access.

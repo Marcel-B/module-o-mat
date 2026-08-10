@@ -8,17 +8,17 @@ import Config
 config :module_o_mat, ModuleOMatWeb.Endpoint,
   cache_static_manifest: "priv/static/cache_manifest.json"
 
-# Force using SSL in production. This also sets the "strict-security-transport" header,
-# known as HSTS. If you have a health check endpoint, you may want to exclude it below.
-# Note `:force_ssl` is required to be set at compile-time.
-config :module_o_mat, ModuleOMatWeb.Endpoint,
-  force_ssl: [
-    rewrite_on: [:x_forwarded_proto],
-    exclude: [
-      # paths: ["/health"],
-      hosts: ["localhost", "127.0.0.1"]
-    ]
-  ]
+# HTTPS redirect is disabled so LAN access via http://IP:PORT works without a
+# reverse proxy. Re-enable when terminating TLS at a proxy (compile-time config):
+#
+# config :module_o_mat, ModuleOMatWeb.Endpoint,
+#   force_ssl: [
+#     rewrite_on: [:x_forwarded_proto],
+#     exclude: [
+#       # paths: ["/health"],
+#       hosts: ["localhost", "127.0.0.1"]
+#     ]
+#   ]
 
 # Do not print debug messages in production
 config :logger, level: :info
