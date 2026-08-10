@@ -49,3 +49,6 @@ npm-debug.log
 *.db-shm
 *.db-wal
 
+# Local Docker / Compose secrets
+.env
+

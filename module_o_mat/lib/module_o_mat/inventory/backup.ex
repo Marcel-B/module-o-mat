@@ -67,11 +67,12 @@ defmodule ModuleOMat.Inventory.Backup do
 
       try do
         extract_zip!(path, tmp_root)
+        content_root = resolve_content_root!(tmp_root)
 
-        types = read_csv!(tmp_root, @module_types_file, @module_type_headers)
-        modules = read_csv!(tmp_root, @modules_file, @module_headers)
-        videos = read_csv!(tmp_root, @videos_file, @video_headers)
-        manuals_source = ensure_manuals_dir!(tmp_root)
+        types = read_csv!(content_root, @module_types_file, @module_type_headers)
+        modules = read_csv!(content_root, @modules_file, @module_headers)
+        videos = read_csv!(content_root, @videos_file, @video_headers)
+        manuals_source = ensure_manuals_dir!(content_root)
 
         case replace_database(types, modules, videos) do
           {:ok, _} ->
@@ -213,6 +214,35 @@ defmodule ModuleOMat.Inventory.Backup do
     case :zip.extract(String.to_charlist(zip_path), cwd: String.to_charlist(tmp_root)) do
       {:ok, _files} -> :ok
       {:error, reason} -> raise "ZIP konnte nicht gelesen werden: #{inspect(reason)}"
+    end
+  end
+
+  # Backups liegen flat im ZIP-Root; manche Tools packen zusaetzlich einen
+  # Ordner drumherum (z.B. Finder). Wir suchen die CSV-Dateien deshalb rekursiv.
+  defp resolve_content_root!(tmp_root) do
+    case find_backup_file(tmp_root, @module_types_file) do
+      nil ->
+        raise "Pflicht-Datei fehlt im Backup: #{@module_types_file}"
+
+      path ->
+        Path.dirname(path)
+    end
+  end
+
+  defp find_backup_file(tmp_root, filename) do
+    direct = Path.join(tmp_root, filename)
+
+    cond do
+      File.regular?(direct) ->
+        direct
+
+      true ->
+        tmp_root
+        |> Path.join("**/#{filename}")
+        |> Path.wildcard()
+        |> Enum.filter(&File.regular?/1)
+        |> Enum.reject(&String.contains?(&1, "__MACOSX"))
+        |> List.first()
     end
   end
 

@@ -1,0 +1,17 @@
+services:
+  web:
+    build: .
+    ports:
+      - "${PORT:-4000}:4000"
+    environment:
+      PHX_HOST: ${PHX_HOST:-localhost}
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE:?SECRET_KEY_BASE must be set}
+      PORT: "4000"
+      DATABASE_PATH: /data/module_o_mat.db
+      MANUAL_UPLOADS_DIR: /data/uploads/manuals
+    volumes:
+      - module_o_mat_data:/data
+    restart: unless-stopped
+
+volumes:
+  module_o_mat_data:

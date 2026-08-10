@@ -23,10 +23,6 @@ end
 config :module_o_mat, ModuleOMatWeb.Endpoint,
   http: [port: String.to_integer(System.get_env("PORT", "4000"))]
 
-if manual_uploads_dir = System.get_env("MANUAL_UPLOADS_DIR") do
-  config :module_o_mat, :manual_uploads_dir, manual_uploads_dir
-end
-
 if config_env() == :dev do
   # Reload browser tabs when matching files change.
   config :module_o_mat, ModuleOMatWeb.Endpoint,
@@ -43,6 +39,18 @@ if config_env() == :dev do
 end
 
 if config_env() == :prod do
+  database_path =
+    System.get_env("DATABASE_PATH") ||
+      "/data/module_o_mat.db"
+
+  config :module_o_mat, ModuleOMat.Repo,
+    database: database_path,
+    pool_size: String.to_integer(System.get_env("POOL_SIZE") || "1")
+
+  config :module_o_mat,
+         :manual_uploads_dir,
+         System.get_env("MANUAL_UPLOADS_DIR") || "/data/uploads/manuals"
+
   # The secret key base is used to sign/encrypt cookies and other secrets.
   # A default value is used in config/dev.exs and config/test.exs but you
   # want to use a different value for prod and you most likely don't want
@@ -101,4 +109,8 @@ if config_env() == :prod do
   #       force_ssl: [hsts: true]
   #
   # Check `Plug.SSL` for all available options in `force_ssl`.
+else
+  if manual_uploads_dir = System.get_env("MANUAL_UPLOADS_DIR") do
+    config :module_o_mat, :manual_uploads_dir, manual_uploads_dir
+  end
 end

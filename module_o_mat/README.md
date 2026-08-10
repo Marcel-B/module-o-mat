@@ -41,6 +41,49 @@ erreichbar.
 mix test
 ```
 
+## Deploy mit Docker / Podman (Einzel-VPS)
+
+Die Produktions-App läuft als Container mit **SQLite** und persistentem Volume
+unter `/data` (Datenbank + PDF-Anleitungen).
+
+1. Secrets vorbereiten:
+
+```bash
+cp .env.example .env
+mix phx.gen.secret
+# Wert als SECRET_KEY_BASE in .env eintragen
+# PHX_HOST auf den öffentlichen Hostnamen setzen (ohne https://)
+```
+
+2. Bauen und starten:
+
+```bash
+# Docker
+docker compose up -d --build
+
+# oder Podman
+podman compose up -d --build
+# alternativ: podman build -t module_o_mat . && podman run ...
+```
+
+Beim Start werden Migrationen automatisch ausgeführt. Die App lauscht auf Port
+`4000` (über `PORT` in `.env` am Host mappbar).
+
+3. Persistenz: Das Compose-Volume `module_o_mat_data` hält
+   `/data/module_o_mat.db` und `/data/uploads/manuals`. Ohne Volume gehen
+   Daten bei Container-Neustarts verloren.
+
+4. Reverse-Proxy: TLS und `X-Forwarded-Proto` am Proxy terminieren. Die App
+   erzwingt HTTPS über `force_ssl` mit `rewrite_on: [:x_forwarded_proto]` und
+   erwartet `PHX_HOST` als öffentlichen Hostnamen.
+
+Nur Image bauen:
+
+```bash
+docker build -t module_o_mat .
+# oder: podman build -t module_o_mat .
+```
+
 ## Dokumentation
 
 Dokumentation kann lokal mit [ExDoc](https://github.com/elixir-lang/ex_doc)

@@ -13,6 +13,11 @@ defmodule ModuleOMat.MixProject do
       deps: deps(),
       aliases: aliases(),
       docs: docs(),
+      releases: [
+        module_o_mat: [
+          include_executables_for: [:unix]
+        ]
+      ],
       test_coverage: [tool: ExCoveralls]
     ]
   end

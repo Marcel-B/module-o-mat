@@ -100,6 +100,26 @@ defmodule ModuleOMat.Inventory.BackupTest do
       assert {:error, reason} = Inventory.import_backup("/tmp/does-not-exist-backup.zip")
       assert reason =~ "nicht gefunden"
     end
+
+    test "importiert Backup mit zusaetzlichem Wrapper-Ordner im ZIP" do
+      module =
+        eurorack_module_fixture(%{
+          manufacturer: "Nested",
+          name: "Wrapped",
+          hp: 8,
+          type: "Utility"
+        })
+
+      flat_zip = tmp_zip_path()
+      assert {:ok, ^flat_zip} = Inventory.export_backup(flat_zip)
+
+      nested_zip = wrap_zip_in_folder!(flat_zip, "inventory-backup")
+
+      assert :ok = Inventory.import_backup(nested_zip)
+      restored = Inventory.get_eurorack_module!(module.id)
+      assert restored.manufacturer == "Nested"
+      assert restored.name == "Wrapped"
+    end
   end
 
   defp tmp_zip_path do
@@ -107,5 +127,34 @@ defmodule ModuleOMat.Inventory.BackupTest do
       System.tmp_dir!(),
       "module_o_mat_backup_test_#{System.unique_integer([:positive])}.zip"
     )
+  end
+
+  defp wrap_zip_in_folder!(source_zip, folder_name) do
+    extract_root =
+      Path.join(
+        System.tmp_dir!(),
+        "module_o_mat_wrap_#{System.unique_integer([:positive])}"
+      )
+
+    folder = Path.join(extract_root, folder_name)
+    File.mkdir_p!(folder)
+
+    {:ok, _} = :zip.extract(String.to_charlist(source_zip), cwd: String.to_charlist(folder))
+
+    nested_zip = tmp_zip_path()
+
+    entries =
+      extract_root
+      |> Path.join("**")
+      |> Path.wildcard()
+      |> Enum.filter(&File.regular?/1)
+      |> Enum.map(fn absolute ->
+        relative = Path.relative_to(absolute, extract_root)
+        {String.to_charlist(relative), File.read!(absolute)}
+      end)
+
+    {:ok, _} = :zip.create(String.to_charlist(nested_zip), entries)
+    File.rm_rf!(extract_root)
+    nested_zip
   end
 end
