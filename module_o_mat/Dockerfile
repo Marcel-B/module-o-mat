@@ -109,8 +109,7 @@ ENV MIX_ENV="prod" \
 # Only copy the final release from the build stage
 COPY --from=builder --chown=nobody:root /app/_build/${MIX_ENV}/rel/module_o_mat ./
 
-USER nobody
-
+# Entrypoint starts as root to chown the mounted /data volume, then drops to nobody.
 VOLUME ["/data"]
 EXPOSE 4000
 
