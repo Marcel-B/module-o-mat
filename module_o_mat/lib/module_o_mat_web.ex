@@ -18,7 +18,8 @@ defmodule ModuleOMatWeb do
   """
 
   def static_paths,
-    do: ~w(assets fonts images favicon.ico favicon.png favicon.svg apple-touch-icon.png robots.txt)
+    do:
+      ~w(assets fonts images favicon.ico favicon.png favicon.svg apple-touch-icon.png robots.txt)
 
   def router do
     quote do
