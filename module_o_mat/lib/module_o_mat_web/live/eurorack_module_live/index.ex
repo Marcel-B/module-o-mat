@@ -2,7 +2,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
   @moduledoc """
   Zeigt alle erfassten Eurorack-Module gruppiert nach Typ (sortiert nach
   Hersteller innerhalb eines Typs) und erlaubt das Anlegen, Anzeigen,
-  Bearbeiten und (Soft-)Loeschen von Modulen ueber Dialoge.
+  Bearbeiten, Duplizieren und (Soft-)Loeschen von Modulen ueber Dialoge.
   """
 
   use ModuleOMatWeb, :live_view
@@ -27,6 +27,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
      |> assign(:editing_module_type, nil)
      |> assign(:module_type_edit_form, nil)
      |> assign(:price_chart_data, nil)
+     |> assign(:source_manual, nil)
      |> allow_upload(:manual,
        accept: ~w(.pdf),
        max_entries: 1,
@@ -52,6 +53,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
     |> assign(:eurorack_module, eurorack_module)
     |> assign(:form, to_form(Inventory.change_eurorack_module(eurorack_module)))
     |> assign(:price_chart_data, nil)
+    |> assign(:source_manual, nil)
   end
 
   defp apply_action(socket, :edit, %{"id" => id}) do
@@ -62,6 +64,19 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
     |> assign(:eurorack_module, eurorack_module)
     |> assign(:form, to_form(Inventory.change_eurorack_module(eurorack_module)))
     |> assign(:price_chart_data, nil)
+    |> assign(:source_manual, nil)
+  end
+
+  defp apply_action(socket, :duplicate, %{"id" => id}) do
+    source = Inventory.get_eurorack_module!(id)
+    eurorack_module = Inventory.prepare_duplicate_eurorack_module(source)
+
+    socket
+    |> assign(:page_title, "Modul duplizieren")
+    |> assign(:eurorack_module, eurorack_module)
+    |> assign(:form, to_form(Inventory.change_eurorack_module(eurorack_module)))
+    |> assign(:price_chart_data, nil)
+    |> assign(:source_manual, source_manual_from(source))
   end
 
   defp apply_action(socket, :show, %{"id" => id}) do
@@ -72,6 +87,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
     |> assign(:eurorack_module, eurorack_module)
     |> assign(:form, to_form(Inventory.change_eurorack_module(eurorack_module)))
     |> assign(:price_chart_data, nil)
+    |> assign(:source_manual, nil)
   end
 
   defp apply_action(socket, :price_history, %{"id" => id}) do
@@ -85,6 +101,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
     |> assign(:eurorack_module, eurorack_module)
     |> assign(:form, nil)
     |> assign(:price_chart_data, build_price_chart_data(eurorack_module.price_observations))
+    |> assign(:source_manual, nil)
   end
 
   defp apply_action(socket, :manage_types, _params) do
@@ -96,6 +113,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
     |> assign(:editing_module_type, nil)
     |> assign(:module_type_edit_form, nil)
     |> assign(:price_chart_data, nil)
+    |> assign(:source_manual, nil)
   end
 
   defp apply_action(socket, :backup, _params) do
@@ -104,6 +122,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
     |> assign(:eurorack_module, nil)
     |> assign(:form, nil)
     |> assign(:price_chart_data, nil)
+    |> assign(:source_manual, nil)
   end
 
   defp apply_action(socket, :index, _params) do
@@ -112,6 +131,18 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
     |> assign(:eurorack_module, nil)
     |> assign(:form, nil)
     |> assign(:price_chart_data, nil)
+    |> assign(:source_manual, nil)
+  end
+
+  defp source_manual_from(%EurorackModule{manual_pdf_key: nil}), do: nil
+
+  defp source_manual_from(%EurorackModule{} = source) do
+    %{
+      key: source.manual_pdf_key,
+      filename: source.manual_pdf_filename,
+      content_type: source.manual_pdf_content_type,
+      size_bytes: source.manual_pdf_size_bytes
+    }
   end
 
   @impl true
@@ -321,17 +352,35 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
   end
 
   def handle_event("remove_manual", _params, socket) do
-    case Inventory.remove_manual(socket.assigns.eurorack_module) do
-      {:ok, eurorack_module} ->
+    case socket.assigns.eurorack_module do
+      %EurorackModule{id: nil} = module ->
+        cleared = %{
+          module
+          | manual_pdf_key: nil,
+            manual_pdf_filename: nil,
+            manual_pdf_content_type: nil,
+            manual_pdf_size_bytes: nil
+        }
+
         {:noreply,
          socket
-         |> assign(:eurorack_module, eurorack_module)
-         |> assign(:form, to_form(Inventory.change_eurorack_module(eurorack_module)))
-         |> reload_eurorack_modules()
-         |> put_flash(:info, "PDF-Anleitung wurde entfernt.")}
+         |> assign(:eurorack_module, cleared)
+         |> assign(:source_manual, nil)
+         |> assign(:form, to_form(Inventory.change_eurorack_module(cleared)))}
 
-      {:error, _changeset} ->
-        {:noreply, put_flash(socket, :error, "PDF-Anleitung konnte nicht entfernt werden.")}
+      eurorack_module ->
+        case Inventory.remove_manual(eurorack_module) do
+          {:ok, updated} ->
+            {:noreply,
+             socket
+             |> assign(:eurorack_module, updated)
+             |> assign(:form, to_form(Inventory.change_eurorack_module(updated)))
+             |> reload_eurorack_modules()
+             |> put_flash(:info, "PDF-Anleitung wurde entfernt.")}
+
+          {:error, _changeset} ->
+            {:noreply, put_flash(socket, :error, "PDF-Anleitung konnte nicht entfernt werden.")}
+        end
     end
   end
 
@@ -365,25 +414,32 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
       {:ok, eurorack_module} ->
         case maybe_attach_manual(socket, eurorack_module) do
           {:ok, eurorack_module} ->
-            {:noreply,
-             socket
-             |> reload_eurorack_modules()
-             |> assign(:manufacturers, Inventory.list_manufacturers())
-             |> assign(:types, available_types())
-             |> put_flash(:info, "Modul \"#{eurorack_module.name}\" wurde gespeichert.")
-             |> push_patch(to: ~p"/")}
+            {:noreply, after_module_saved(socket, eurorack_module, :saved)}
 
           {:error, :manual_upload} ->
-            {:noreply,
-             socket
-             |> reload_eurorack_modules()
-             |> assign(:manufacturers, Inventory.list_manufacturers())
-             |> assign(:types, available_types())
-             |> put_flash(
-               :error,
-               "Modul wurde gespeichert, aber die PDF-Anleitung konnte nicht uebernommen werden."
-             )
-             |> push_patch(to: ~p"/")}
+            {:noreply, after_module_saved(socket, eurorack_module, :manual_upload_error)}
+        end
+
+      {:error, changeset} ->
+        {:noreply, assign(socket, :form, to_form(changeset))}
+    end
+  end
+
+  defp save_eurorack_module(socket, :duplicate, params) do
+    case Inventory.create_eurorack_module(params) do
+      {:ok, eurorack_module} ->
+        case maybe_attach_manual(socket, eurorack_module) do
+          {:ok, eurorack_module} ->
+            case maybe_copy_source_manual(socket, eurorack_module) do
+              {:ok, eurorack_module} ->
+                {:noreply, after_module_saved(socket, eurorack_module, :saved)}
+
+              {:error, :manual_copy} ->
+                {:noreply, after_module_saved(socket, eurorack_module, :manual_upload_error)}
+            end
+
+          {:error, :manual_upload} ->
+            {:noreply, after_module_saved(socket, eurorack_module, :manual_upload_error)}
         end
 
       {:error, changeset} ->
@@ -396,30 +452,48 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
       {:ok, eurorack_module} ->
         case maybe_attach_manual(socket, eurorack_module) do
           {:ok, eurorack_module} ->
-            {:noreply,
-             socket
-             |> reload_eurorack_modules()
-             |> assign(:manufacturers, Inventory.list_manufacturers())
-             |> assign(:types, available_types())
-             |> put_flash(:info, "Modul \"#{eurorack_module.name}\" wurde aktualisiert.")
-             |> push_patch(to: ~p"/")}
+            {:noreply, after_module_saved(socket, eurorack_module, :updated)}
 
           {:error, :manual_upload} ->
-            {:noreply,
-             socket
-             |> reload_eurorack_modules()
-             |> assign(:manufacturers, Inventory.list_manufacturers())
-             |> assign(:types, available_types())
-             |> put_flash(
-               :error,
-               "Modul wurde aktualisiert, aber die PDF-Anleitung konnte nicht uebernommen werden."
-             )
-             |> push_patch(to: ~p"/")}
+            {:noreply, after_module_saved(socket, eurorack_module, :manual_update_error)}
         end
 
       {:error, changeset} ->
         {:noreply, assign(socket, :form, to_form(changeset))}
     end
+  end
+
+  defp after_module_saved(socket, eurorack_module, outcome) do
+    socket =
+      socket
+      |> reload_eurorack_modules()
+      |> assign(:manufacturers, Inventory.list_manufacturers())
+      |> assign(:types, available_types())
+
+    socket =
+      case outcome do
+        :saved ->
+          put_flash(socket, :info, "Modul \"#{eurorack_module.name}\" wurde gespeichert.")
+
+        :updated ->
+          put_flash(socket, :info, "Modul \"#{eurorack_module.name}\" wurde aktualisiert.")
+
+        :manual_upload_error ->
+          put_flash(
+            socket,
+            :error,
+            "Modul wurde gespeichert, aber die PDF-Anleitung konnte nicht uebernommen werden."
+          )
+
+        :manual_update_error ->
+          put_flash(
+            socket,
+            :error,
+            "Modul wurde aktualisiert, aber die PDF-Anleitung konnte nicht uebernommen werden."
+          )
+      end
+
+    push_patch(socket, to: ~p"/")
   end
 
   defp maybe_attach_manual(socket, eurorack_module) do
@@ -441,6 +515,20 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
       [updated] when is_struct(updated, EurorackModule) -> {:ok, updated}
       [:manual_upload_failed] -> {:error, :manual_upload}
       [] -> {:ok, eurorack_module}
+    end
+  end
+
+  defp maybe_copy_source_manual(socket, eurorack_module) do
+    case socket.assigns.source_manual do
+      %{key: source_key} = source_manual
+      when is_binary(source_key) and eurorack_module.manual_pdf_key in [nil, ""] ->
+        case Inventory.copy_manual(eurorack_module, source_key, source_manual) do
+          {:ok, updated} -> {:ok, updated}
+          {:error, _} -> {:error, :manual_copy}
+        end
+
+      _ ->
+        {:ok, eurorack_module}
     end
   end
 

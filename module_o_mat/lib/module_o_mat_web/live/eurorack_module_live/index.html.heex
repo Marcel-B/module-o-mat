@@ -179,15 +179,6 @@
             <% end %>
             <.youtube_play_button eurorack_module={eurorack_module} />
             <.link
-              patch={~p"/eurorack_modules/#{eurorack_module.id}/price_history"}
-              id={"price-history-eurorack-module-#{eurorack_module.id}"}
-              class="btn btn-ghost btn-xs"
-              title="Preisverlauf"
-              aria-label="Preisverlauf"
-            >
-              <.icon name="hero-presentation-chart-line" />
-            </.link>
-            <.link
               patch={~p"/eurorack_modules/#{eurorack_module.id}"}
               id={"show-eurorack-module-#{eurorack_module.id}"}
               class="btn btn-ghost btn-xs"
@@ -196,26 +187,61 @@
             >
               <.icon name="hero-eye" />
             </.link>
-            <.link
-              patch={~p"/eurorack_modules/#{eurorack_module.id}/edit"}
-              id={"edit-eurorack-module-#{eurorack_module.id}"}
-              class="btn btn-ghost btn-xs"
-              title="Bearbeiten"
-              aria-label="Bearbeiten"
+            <div
+              class="dropdown dropdown-end"
+              id={"actions-menu-eurorack-module-#{eurorack_module.id}"}
             >
-              <.icon name="hero-pencil-square" />
-            </.link>
-            <button
-              type="button"
-              id={"delete-eurorack-module-#{eurorack_module.id}"}
-              class="btn btn-ghost btn-xs text-error"
-              title="Loeschen"
-              aria-label="Loeschen"
-              phx-click="delete"
-              phx-value-id={eurorack_module.id}
-            >
-              <.icon name="hero-trash" />
-            </button>
+              <div
+                tabindex="0"
+                role="button"
+                id={"actions-eurorack-module-#{eurorack_module.id}"}
+                class="btn btn-ghost btn-xs"
+                title="Aktionen"
+                aria-label="Aktionen"
+              >
+                <.icon name="hero-ellipsis-vertical" />
+              </div>
+              <ul
+                tabindex="0"
+                class="dropdown-content menu bg-base-100 rounded-box z-10 w-48 p-2 shadow"
+              >
+                <li>
+                  <.link
+                    patch={~p"/eurorack_modules/#{eurorack_module.id}/price_history"}
+                    id={"price-history-eurorack-module-#{eurorack_module.id}"}
+                  >
+                    <.icon name="hero-presentation-chart-line" class="size-4" /> Preisverlauf
+                  </.link>
+                </li>
+                <li>
+                  <.link
+                    patch={~p"/eurorack_modules/#{eurorack_module.id}/edit"}
+                    id={"edit-eurorack-module-#{eurorack_module.id}"}
+                  >
+                    <.icon name="hero-pencil-square" class="size-4" /> Bearbeiten
+                  </.link>
+                </li>
+                <li>
+                  <.link
+                    patch={~p"/eurorack_modules/#{eurorack_module.id}/duplicate"}
+                    id={"duplicate-eurorack-module-#{eurorack_module.id}"}
+                  >
+                    <.icon name="hero-document-duplicate" class="size-4" /> Duplizieren
+                  </.link>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    id={"delete-eurorack-module-#{eurorack_module.id}"}
+                    class="text-error"
+                    phx-click="delete"
+                    phx-value-id={eurorack_module.id}
+                  >
+                    <.icon name="hero-trash" class="size-4" /> Loeschen
+                  </button>
+                </li>
+              </ul>
+            </div>
           </div>
         </td>
       </tr>
@@ -348,7 +374,7 @@
   </.modal>
 
   <.modal
-    :if={@live_action in [:new, :edit, :show]}
+    :if={@live_action in [:new, :edit, :duplicate, :show]}
     id="eurorack-module-modal"
     box_class="sm:max-w-2xl max-h-[calc(100vh-5em)] flex flex-col overflow-hidden"
   >
@@ -377,7 +403,7 @@
     </div>
 
     <.form
-      :if={@live_action in [:new, :edit]}
+      :if={@live_action in [:new, :edit, :duplicate]}
       for={@form}
       id="eurorack-module-form"
       class="flex min-h-0 flex-1 flex-col"

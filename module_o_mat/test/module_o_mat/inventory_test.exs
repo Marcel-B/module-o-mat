@@ -814,6 +814,65 @@ defmodule ModuleOMat.InventoryTest do
     end
   end
 
+  describe "prepare_duplicate_eurorack_module/1" do
+    test "kopiert Felder und YouTube-URLs ohne IDs" do
+      source =
+        eurorack_module_fixture(%{
+          name: "Maths",
+          purchase_price: "250.00",
+          current_value: "300.00",
+          youtube_videos: [%{url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ"}]
+        })
+
+      duplicate = Inventory.prepare_duplicate_eurorack_module(source)
+
+      assert duplicate.id == nil
+      assert duplicate.name == "Maths"
+      assert Decimal.eq?(duplicate.purchase_price, Decimal.new("250.00"))
+      assert Decimal.eq?(duplicate.current_value, Decimal.new("300.00"))
+      assert length(duplicate.youtube_videos) == 1
+      assert hd(duplicate.youtube_videos).id == nil
+      assert hd(duplicate.youtube_videos).url == "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+    end
+  end
+
+  describe "copy_manual/2" do
+    @fixture Path.expand("../support/fixtures/files/sample.pdf", __DIR__)
+
+    test "kopiert die PDF-Datei unter einem neuen Key" do
+      source = eurorack_module_fixture()
+
+      assert {:ok, with_manual} =
+               Inventory.attach_manual(source, %{
+                 tmp_path: @fixture,
+                 filename: "maths.pdf",
+                 content_type: "application/pdf",
+                 size: File.stat!(@fixture).size
+               })
+
+      target = eurorack_module_fixture(%{name: "Maths II", manufacturer: "Make Noise"})
+
+      assert {:ok, copied} =
+               Inventory.copy_manual(target, with_manual.manual_pdf_key, %{
+                 filename: with_manual.manual_pdf_filename,
+                 content_type: with_manual.manual_pdf_content_type,
+                 size_bytes: with_manual.manual_pdf_size_bytes
+               })
+
+      assert copied.manual_pdf_key
+      assert copied.manual_pdf_key != with_manual.manual_pdf_key
+      assert copied.manual_pdf_filename == "maths.pdf"
+
+      assert File.exists?(
+               ModuleOMat.Inventory.ManualStorage.LocalDisk.path_for(copied.manual_pdf_key)
+             )
+
+      assert File.exists?(
+               ModuleOMat.Inventory.ManualStorage.LocalDisk.path_for(with_manual.manual_pdf_key)
+             )
+    end
+  end
+
   describe "change_eurorack_module/2" do
     test "liefert ein Changeset fuer das Modul" do
       eurorack_module = eurorack_module_fixture()

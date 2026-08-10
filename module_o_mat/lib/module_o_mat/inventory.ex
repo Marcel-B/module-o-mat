@@ -476,6 +476,84 @@ defmodule ModuleOMat.Inventory do
   end
 
   @doc """
+  Baut eine nicht persistierte Kopie eines Moduls fuer den Duplizieren-Dialog.
+
+  YouTube-Videos werden ohne IDs uebernommen (gleiche URLs), PDF-Metadaten
+  bleiben zur Anzeige erhalten. Preisbeobachtungen werden nicht kopiert.
+  """
+  def prepare_duplicate_eurorack_module(%EurorackModule{} = source) do
+    source = ensure_youtube_videos_loaded(source)
+
+    videos =
+      Enum.map(source.youtube_videos, fn video ->
+        %YoutubeVideo{url: video.url, position: video.position}
+      end)
+
+    %EurorackModule{
+      manufacturer: source.manufacturer,
+      name: source.name,
+      hp: source.hp,
+      type: source.type,
+      subtypes: source.subtypes || [],
+      current_draw_plus12v_ma: source.current_draw_plus12v_ma,
+      current_draw_minus12v_ma: source.current_draw_minus12v_ma,
+      current_draw_plus5v_ma: source.current_draw_plus5v_ma,
+      depth_mm: source.depth_mm,
+      description: source.description,
+      manual_url: source.manual_url,
+      purchase_price: source.purchase_price,
+      current_value: source.current_value,
+      manual_pdf_key: source.manual_pdf_key,
+      manual_pdf_filename: source.manual_pdf_filename,
+      manual_pdf_content_type: source.manual_pdf_content_type,
+      manual_pdf_size_bytes: source.manual_pdf_size_bytes,
+      youtube_videos: videos
+    }
+  end
+
+  @doc """
+  Kopiert die PDF-Anleitung vom Quell-Storage-Key auf das Zielmodul mit einem
+  neuen Key. `meta` liefert Dateiname, Content-Type und Groesse.
+  """
+  def copy_manual(%EurorackModule{} = target, source_key, meta \\ %{})
+      when is_binary(source_key) and is_map(meta) do
+    new_key = ManualStorage.new_key()
+    tmp_path = Path.join(System.tmp_dir!(), "module-o-mat-manual-copy-#{new_key}.pdf")
+
+    try do
+      ManualStorage.copy_out!(source_key, tmp_path)
+      ManualStorage.store!(new_key, tmp_path)
+
+      attrs = %{
+        manual_pdf_key: new_key,
+        manual_pdf_filename:
+          Map.get(meta, :filename) || Map.get(meta, "filename") || target.manual_pdf_filename,
+        manual_pdf_content_type:
+          Map.get(meta, :content_type) || Map.get(meta, "content_type") ||
+            target.manual_pdf_content_type || "application/pdf",
+        manual_pdf_size_bytes:
+          Map.get(meta, :size_bytes) || Map.get(meta, "size_bytes") ||
+            target.manual_pdf_size_bytes
+      }
+
+      case target |> EurorackModule.manual_changeset(attrs) |> Repo.update() do
+        {:ok, updated} ->
+          {:ok, updated}
+
+        {:error, changeset} ->
+          ManualStorage.delete(new_key)
+          {:error, changeset}
+      end
+    rescue
+      error in [File.Error, ArgumentError] ->
+        ManualStorage.delete(new_key)
+        {:error, error}
+    after
+      _ = File.rm(tmp_path)
+    end
+  end
+
+  @doc """
   Liefert ein `%Ecto.Changeset{}`, um Aenderungen an einem Eurorack-Modul
   nachzuverfolgen, z.B. fuer eine spaetere Formular-Anbindung.
   """
