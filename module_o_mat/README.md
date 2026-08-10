@@ -55,9 +55,11 @@ Nach erfolgreichen Tests auf `main` baut CI das Image und pusht es nach
 cp .env.example .env
 mix phx.gen.secret
 # Wert als SECRET_KEY_BASE in .env eintragen
-# PHX_HOST auf Hostnamen oder LAN-IP setzen (ohne Schema)
-# LAN: PHX_SCHEME=http und PORT=4012 (o.ä.)
-# Hinter Proxy: PHX_SCHEME=https und PHX_HOST=dein.hostname
+# PHX_HOST auf den Browser-Hostnamen setzen (ohne Schema)
+# LAN direkt: IP; hinter Proxy: module.lan
+# PHX_SCHEME=http und PORT=4012 (o.ä.)
+# Hinter Proxy zusätzlich PHX_PORT=80
+# Optional PHX_CHECK_ORIGIN für Hostname + IP gleichzeitig
 ```
 
 2. Image holen und starten (ohne lokalen Build):
@@ -87,6 +89,19 @@ Container auf Port `4000` (über `PORT` in `.env` am Host mappbar).
 Nicht im Immich-CT mitinstallieren — eigener LXC hält Updates, Backups und
 Ressourcen getrennt. **Kein Git-Repo nötig**, nur Docker + Compose-Datei.
 
+### Alten lokalen Build entfernen
+
+Falls du vorher per Git + `docker compose build` deployt hast:
+
+```bash
+curl -fsSL -o /tmp/cleanup-local-deploy.sh \
+  https://raw.githubusercontent.com/Marcel-B/module-o-mat/main/module_o_mat/scripts/cleanup-local-deploy.sh
+bash /tmp/cleanup-local-deploy.sh
+```
+
+Löscht Compose-Stack, lokale Images, Volumes und typische Quellordner
+(` /opt/module-o-mat` usw.). Bestätigung mit `y`; ohne Nachfrage: `--yes`.
+
 1. In Proxmox **Erstelle CT**: Debian 12, unprivileged, 1–2 vCPU, ~1–2 GB RAM,
    ~8–16 GB Disk (`local-lvm`), DHCP oder feste LAN-IP. Unter Options → Features
    **Nesting** aktivieren (für Docker), CT neu starten.
@@ -107,10 +122,21 @@ cp .env.example .env
 
 ```bash
 # SECRET_KEY_BASE aus `mix phx.gen.secret` (lokal erzeugen und eintragen)
-# PHX_HOST=<CT-LAN-IP>
-# PHX_SCHEME=http
-# PORT=4012
+# Direkter LAN-Zugriff:
+#   PHX_HOST=<CT-LAN-IP>
+#   PHX_SCHEME=http
+#   PORT=4012
+# Hinter Nginx Proxy Manager (http://module.lan):
+#   PHX_HOST=module.lan
+#   PHX_SCHEME=http
+#   PORT=4012
+#   PHX_PORT=80
+#   PHX_CHECK_ORIGIN=http://module.lan,http://<CT-LAN-IP>:4012
 ```
+
+`PHX_HOST` muss dem Hostnamen in der Browser-URL entsprechen. Sonst lehnt
+Phoenix LiveView-WebSockets mit `403` ab und fällt in eine Longpoll-
+Reconnect-Schleife.
 
 4. Image pullen und starten:
 
@@ -123,7 +149,7 @@ Falls das GHCR-Paket privat ist: einmal `docker login ghcr.io` mit einem
 GitHub-Token (`read:packages`), danach Package unter GitHub → Packages auf
 **Public** stellen (empfohlen für LAN-Homelab).
 
-5. Im LAN-Browser öffnen: `http://<CT-LAN-IP>:4012`
+5. Im LAN-Browser öffnen: `http://<CT-LAN-IP>:4012` bzw. `http://module.lan`
 
 Update später: `docker compose pull && docker compose up -d`
 

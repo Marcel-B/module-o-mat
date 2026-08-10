@@ -67,6 +67,7 @@ if config_env() == :prod do
   scheme = System.get_env("PHX_SCHEME") || "https"
 
   # Public URL port: for http use the host-mapped port (PHX_PORT), for https default 443.
+  # Behind a reverse proxy on :80, set PHX_PORT=80 (independent of the container host mapping).
   url_port =
     case scheme do
       "http" ->
@@ -76,10 +77,23 @@ if config_env() == :prod do
         String.to_integer(System.get_env("PHX_PORT") || "443")
     end
 
+  # LiveView WebSockets reject mismatched Origin headers (403 → longpoll reconnect loop).
+  # Default `true` allows only PHX_HOST. For hostname + direct IP access, set e.g.:
+  # PHX_CHECK_ORIGIN=http://module.lan,http://192.168.2.197:4012
+  check_origin =
+    case System.get_env("PHX_CHECK_ORIGIN") do
+      nil -> true
+      "" -> true
+      "true" -> true
+      "false" -> false
+      origins -> String.split(origins, ",", trim: true)
+    end
+
   config :module_o_mat, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
   config :module_o_mat, ModuleOMatWeb.Endpoint,
     url: [host: host, port: url_port, scheme: scheme],
+    check_origin: check_origin,
     http: [
       # Enable IPv6 and bind on all interfaces.
       # Set it to  {0, 0, 0, 0, 0, 0, 0, 1} for local network only access.
