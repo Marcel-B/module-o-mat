@@ -365,12 +365,15 @@ defmodule ModuleOMat.InventoryTest do
 
   describe "inventory_stats/1" do
     test "liefert Nullwerte, wenn keine Module existieren" do
-      assert Inventory.inventory_stats() == %{
-               count: 0,
-               total_hp: 0,
-               total_purchase_price: Decimal.new(0),
-               total_current_value: Decimal.new(0)
-             }
+      stats = Inventory.inventory_stats()
+
+      assert stats.count == 0
+      assert stats.total_hp == 0
+      assert Decimal.eq?(stats.total_width_mm, Decimal.new(0))
+      assert Decimal.eq?(stats.total_width_cm, Decimal.new(0))
+      assert Decimal.eq?(stats.total_width_m, Decimal.new(0))
+      assert Decimal.eq?(stats.total_purchase_price, Decimal.new(0))
+      assert Decimal.eq?(stats.total_current_value, Decimal.new(0))
     end
 
     test "summiert Module, HP und Eurobetraege ueber den gesamten Bestand" do
@@ -393,6 +396,9 @@ defmodule ModuleOMat.InventoryTest do
 
       assert stats.count == 2
       assert stats.total_hp == 32
+      assert Decimal.eq?(stats.total_width_mm, Decimal.new("162.56"))
+      assert Decimal.eq?(stats.total_width_cm, Decimal.new("16.256"))
+      assert Decimal.eq?(stats.total_width_m, Decimal.new("0.16256"))
       assert Decimal.eq?(stats.total_purchase_price, Decimal.new("300.00"))
       assert Decimal.eq?(stats.total_current_value, Decimal.new("120.00"))
     end
@@ -420,6 +426,7 @@ defmodule ModuleOMat.InventoryTest do
 
       assert stats.count == 1
       assert stats.total_hp == 12
+      assert Decimal.eq?(stats.total_width_mm, Decimal.new("60.96"))
       assert Decimal.eq?(stats.total_purchase_price, Decimal.new("200.00"))
       assert Decimal.eq?(stats.total_current_value, Decimal.new("180.00"))
     end
@@ -812,6 +819,88 @@ defmodule ModuleOMat.InventoryTest do
       eurorack_module = eurorack_module_fixture()
 
       assert %Ecto.Changeset{} = Inventory.change_eurorack_module(eurorack_module)
+    end
+  end
+
+  describe "price observations" do
+    test "create_price_observations speichert Beobachtungen und setzt Median als current_value" do
+      module = eurorack_module_fixture(%{current_value: nil})
+
+      assert {:ok, result} =
+               Inventory.create_price_observations(module, [
+                 %{amount: "150.00", source: "ebay_sold", observed_on: ~D[2026-08-01]},
+                 %{amount: "210.00", source: "shop", observed_on: ~D[2026-08-02]},
+                 %{amount: "180.00", source: "ebay_sold", observed_on: ~D[2026-08-03]}
+               ])
+
+      assert length(result.observations) == 3
+      assert Decimal.eq?(result.module.current_value, Decimal.new("180.00"))
+      assert Decimal.eq?(result.price_range.min, Decimal.new("150.00"))
+      assert Decimal.eq?(result.price_range.max, Decimal.new("210.00"))
+      assert result.price_range.count == 3
+      assert result.price_range.last_observed_on == ~D[2026-08-03]
+    end
+
+    test "Median bei gerader Anzahl ist Mittel der beiden mittleren Werte" do
+      module = eurorack_module_fixture()
+
+      assert {:ok, result} =
+               Inventory.create_price_observations(module, [
+                 %{amount: "100", source: "shop"},
+                 %{amount: "200", source: "shop"}
+               ])
+
+      assert Decimal.eq?(result.module.current_value, Decimal.new("150"))
+    end
+
+    test "erlaubt expliziten current_value statt Median" do
+      module = eurorack_module_fixture()
+
+      assert {:ok, result} =
+               Inventory.create_price_observations(
+                 module,
+                 [%{amount: "100", source: "shop"}, %{amount: "200", source: "shop"}],
+                 set_current_value: "175.50"
+               )
+
+      assert Decimal.eq?(result.module.current_value, Decimal.new("175.50"))
+    end
+
+    test "leere Observation-Liste liefert Fehler" do
+      module = eurorack_module_fixture()
+      assert {:error, :empty_observations} = Inventory.create_price_observations(module, [])
+    end
+
+    test "price_ranges_for_modules aggregiert pro Modul-ID" do
+      a = eurorack_module_fixture(%{name: "A"})
+      b = eurorack_module_fixture(%{name: "B", manufacturer: "Other"})
+
+      {:ok, _} =
+        Inventory.create_price_observations(a, [
+          %{amount: "10", source: "shop"},
+          %{amount: "30", source: "shop"}
+        ])
+
+      ranges = Inventory.price_ranges_for_modules([a.id, b.id])
+
+      assert Map.has_key?(ranges, a.id)
+      refute Map.has_key?(ranges, b.id)
+      assert Decimal.eq?(ranges[a.id].min, Decimal.new("10"))
+      assert Decimal.eq?(ranges[a.id].max, Decimal.new("30"))
+    end
+
+    test "list_modules_for_valuation und get_module_for_valuation! ignorieren Soft-Deletes" do
+      active = eurorack_module_fixture(%{name: "Active"})
+      deleted = eurorack_module_fixture(%{name: "Deleted", manufacturer: "X"})
+      {:ok, _} = Inventory.soft_delete_eurorack_module(deleted)
+
+      ids = Inventory.list_modules_for_valuation() |> Enum.map(& &1.id)
+      assert active.id in ids
+      refute deleted.id in ids
+
+      assert_raise Ecto.NoResultsError, fn ->
+        Inventory.get_module_for_valuation!(deleted.id)
+      end
     end
   end
 end

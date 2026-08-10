@@ -430,6 +430,50 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
     |> Enum.chunk_by(& &1.type)
   end
 
+  defp format_hp_width(%{total_width_cm: cm, total_width_m: m}) do
+    cm_str =
+      cm
+      |> Decimal.round(1)
+      |> Decimal.to_string(:normal)
+      |> String.replace(".", ",")
+
+    m_str =
+      m
+      |> Decimal.round(2)
+      |> Decimal.to_string(:normal)
+      |> String.replace(".", ",")
+
+    "#{cm_str} cm / #{m_str} m"
+  end
+
+  defp format_value_cell(nil, current_value), do: format_euro(current_value)
+
+  defp format_value_cell(%{min: min, max: max}, _current_value) do
+    if Decimal.eq?(min, max) do
+      format_euro(min)
+    else
+      "#{format_euro_amount(min)}–#{format_euro(max)}"
+    end
+  end
+
+  defp price_range_title(nil), do: nil
+
+  defp price_range_title(%{count: count, last_observed_on: date}) do
+    "Basierend auf #{count} Beobachtung(en), zuletzt #{Calendar.strftime(date, "%d.%m.%Y")}"
+  end
+
+  defp format_euro_amount(%Decimal{} = amount) do
+    amount
+    |> Decimal.round(2)
+    |> Decimal.to_string(:normal)
+    |> then(fn str ->
+      case String.split(str, ".") do
+        [int] -> "#{format_thousands(int)},00"
+        [int, frac] -> "#{format_thousands(int)},#{String.pad_trailing(frac, 2, "0")}"
+      end
+    end)
+  end
+
   defp format_euro(nil), do: "—"
 
   defp format_euro(%Decimal{} = amount) do
@@ -485,8 +529,11 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
       max_hp: socket.assigns.max_hp
     ]
 
+    modules = Inventory.list_eurorack_modules(filter_opts)
+
     socket
-    |> assign(:eurorack_modules, Inventory.list_eurorack_modules(filter_opts))
+    |> assign(:eurorack_modules, modules)
+    |> assign(:price_ranges, Inventory.price_ranges_for_modules(Enum.map(modules, & &1.id)))
     |> assign(:inventory_stats, Inventory.inventory_stats(filter_opts))
     |> assign(:filter_types, Inventory.list_used_types())
   end
