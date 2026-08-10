@@ -7,8 +7,10 @@ services:
     environment:
       PHX_HOST: ${PHX_HOST:-localhost}
       PHX_SCHEME: ${PHX_SCHEME:-https}
-      # Public URL port (host mapping); container always binds 4000 internally
-      PHX_PORT: ${PORT:-4000}
+      # Public URL port (e.g. 80 behind NPM). Falls back to host-mapped PORT.
+      PHX_PORT: ${PHX_PORT:-${PORT:-4000}}
+      # Optional: comma-separated Origins if hostname and IP:PORT both serve the app
+      PHX_CHECK_ORIGIN: ${PHX_CHECK_ORIGIN:-}
       SECRET_KEY_BASE: ${SECRET_KEY_BASE:?SECRET_KEY_BASE must be set}
       PORT: "4000"
       DATABASE_PATH: /data/module_o_mat.db
