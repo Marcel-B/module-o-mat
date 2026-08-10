@@ -214,15 +214,15 @@
     <tfoot id="inventory-stats">
       <tr class="border-t-2 border-base-300 font-semibold">
         <td class="py-2">
-          {@inventory_stats.count}
-          {if @inventory_stats.count == 1, do: "Modul", else: "Module"}
-        </td>
-        <td class="w-14 whitespace-nowrap tabular-nums">
-          <span>{@inventory_stats.total_hp}</span>
-          <span class="block text-xs font-normal text-base-content/60 whitespace-nowrap">
+          <span>
+            {@inventory_stats.count}
+            {if @inventory_stats.count == 1, do: "Modul", else: "Module"}
+          </span>
+          <span class="block text-xs font-normal text-base-content/60 tabular-nums">
             {format_hp_width(@inventory_stats)}
           </span>
         </td>
+        <td class="w-14 whitespace-nowrap tabular-nums">{@inventory_stats.total_hp}</td>
         <td class="w-24 text-right whitespace-nowrap tabular-nums">
           {format_euro_sum(@inventory_stats.total_purchase_price)}
         </td>
