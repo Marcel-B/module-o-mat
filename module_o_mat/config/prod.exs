@@ -8,17 +8,9 @@ import Config
 config :module_o_mat, ModuleOMatWeb.Endpoint,
   cache_static_manifest: "priv/static/cache_manifest.json"
 
-# HTTPS redirect is disabled so LAN access via http://IP:PORT works without a
-# reverse proxy. Re-enable when terminating TLS at a proxy (compile-time config):
-#
-# config :module_o_mat, ModuleOMatWeb.Endpoint,
-#   force_ssl: [
-#     rewrite_on: [:x_forwarded_proto],
-#     exclude: [
-#       # paths: ["/health"],
-#       hosts: ["localhost", "127.0.0.1"]
-#     ]
-#   ]
+# HTTPS redirect is optional and controlled at runtime via PHX_FORCE_SSL=true
+# (see config/runtime.exs) when TLS terminates at a reverse proxy.
+# Leave PHX_FORCE_SSL unset for direct LAN access via http://IP:PORT.
 
 # Do not print debug messages in production
 config :logger, level: :info
