@@ -493,7 +493,9 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
             %{
               x: Date.to_iso8601(observation.observed_on),
               y: decimal_to_number(observation.amount),
-              source: source
+              source: source,
+              notes: observation.notes,
+              source_url: observation.source_url
             }
           end)
 

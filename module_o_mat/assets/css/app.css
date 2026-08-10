@@ -103,3 +103,40 @@
 [data-phx-session], [data-phx-teleported-src] { display: contents }
 
 /* This file is for your main application CSS */
+
+.price-history-tooltip {
+  position: absolute;
+  z-index: 20;
+  transform: translate(-50%, calc(-100% - 0.75rem));
+  min-width: 8rem;
+  max-width: 18rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid color-mix(in oklab, var(--color-base-content) 18%, transparent);
+  background: var(--color-base-100);
+  color: var(--color-base-content);
+  box-shadow: 0 8px 24px color-mix(in oklab, var(--color-base-content) 18%, transparent);
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  transition: opacity 120ms ease;
+  pointer-events: none;
+}
+
+.price-history-tooltip__title {
+  margin-bottom: 0.25rem;
+  font-weight: 600;
+}
+
+.price-history-tooltip__row + .price-history-tooltip__row {
+  margin-top: 0.25rem;
+}
+
+.price-history-tooltip__link {
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-underline-offset: 0.12em;
+}
+
+.price-history-tooltip__link:hover {
+  color: color-mix(in oklab, var(--color-primary) 80%, var(--color-base-content));
+}

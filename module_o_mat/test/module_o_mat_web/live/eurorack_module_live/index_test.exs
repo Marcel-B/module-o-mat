@@ -111,7 +111,13 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
 
       {:ok, _} =
         Inventory.create_price_observations(module, [
-          %{amount: "150.00", source: "ebay_sold", observed_on: ~D[2026-08-01]},
+          %{
+            amount: "150.00",
+            source: "ebay_sold",
+            source_url: "https://ebay.example/item/1",
+            notes: "guter Zustand",
+            observed_on: ~D[2026-08-01]
+          },
           %{amount: "210.00", source: "shop", observed_on: ~D[2026-08-03]},
           %{amount: "180.00", source: "ebay_sold", observed_on: ~D[2026-08-05]}
         ])
@@ -144,6 +150,11 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
 
       sources = Enum.map(chart_data["datasets"], & &1["source"])
       assert sources == ["ebay_sold", "shop"]
+
+      ebay_dataset = Enum.find(chart_data["datasets"], &(&1["source"] == "ebay_sold"))
+      first_point = Enum.find(ebay_dataset["points"], &(&1["x"] == "2026-08-01"))
+      assert first_point["notes"] == "guter Zustand"
+      assert first_point["source_url"] == "https://ebay.example/item/1"
     end
 
     test "zeigt im Preisverlauf-Dialog einen Leerzustand ohne Beobachtungen", %{conn: conn} do
