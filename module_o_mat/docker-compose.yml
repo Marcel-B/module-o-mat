@@ -1,5 +1,6 @@
 services:
   web:
+    image: ghcr.io/marcel-b/module-o-mat:${IMAGE_TAG:-latest}
     build: .
     ports:
       - "${PORT:-4000}:4000"

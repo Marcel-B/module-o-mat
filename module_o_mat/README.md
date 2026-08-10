@@ -41,10 +41,13 @@ erreichbar.
 mix test
 ```
 
-## Deploy mit Docker / Podman (Einzel-VPS)
+## Deploy mit Docker / Podman
 
 Die Produktions-App läuft als Container mit **SQLite** und persistentem Volume
 unter `/data` (Datenbank + PDF-Anleitungen).
+
+Nach erfolgreichen Tests auf `main` baut CI das Image und pusht es nach
+**GHCR**: `ghcr.io/marcel-b/module-o-mat:latest` (zusätzlich Tag mit Commit-SHA).
 
 1. Secrets vorbereiten:
 
@@ -57,15 +60,14 @@ mix phx.gen.secret
 # Hinter Proxy: PHX_SCHEME=https und PHX_HOST=dein.hostname
 ```
 
-2. Bauen und starten:
+2. Image holen und starten (ohne lokalen Build):
 
 ```bash
-# Docker
-docker compose up -d --build
+docker compose pull
+docker compose up -d
 
-# oder Podman
-podman compose up -d --build
-# alternativ: podman build -t module_o_mat . && podman run ...
+# optional lokal aus dem Dockerfile bauen:
+# docker compose up -d --build
 ```
 
 Beim Start werden Migrationen automatisch ausgeführt. Die App lauscht im
@@ -80,39 +82,50 @@ Container auf Port `4000` (über `PORT` in `.env` am Host mappbar).
    Zusätzlich in `config/prod.exs` wieder `force_ssl` aktivieren und Image neu
    bauen. Für reinen LAN-Zugriff über `http://IP:PORT` ist kein Proxy nötig.
 
-Nur Image bauen:
-
-```bash
-docker build -t module_o_mat .
-# oder: podman build -t module_o_mat .
-```
-
 ## Deploy auf Proxmox (LAN, eigener CT)
 
 Nicht im Immich-CT mitinstallieren — eigener LXC hält Updates, Backups und
-Ressourcen getrennt.
+Ressourcen getrennt. **Kein Git-Repo nötig**, nur Docker + Compose-Datei.
 
 1. In Proxmox **Erstelle CT**: Debian 12, unprivileged, 1–2 vCPU, ~1–2 GB RAM,
-   ~8–16 GB Disk (`local-lvm`), DHCP oder feste LAN-IP.
-2. Im CT Docker installieren, dieses Repo klonen (oder den Quellbaum
-   kopieren).
-3. `.env` anlegen, z. B.:
+   ~8–16 GB Disk (`local-lvm`), DHCP oder feste LAN-IP. Unter Options → Features
+   **Nesting** aktivieren (für Docker), CT neu starten.
+2. Im CT Docker installieren, dann Compose + Env holen:
 
 ```bash
+apt update && apt install -y ca-certificates curl
+curl -fsSL https://get.docker.com | sh
+mkdir -p /opt/module-o-mat && cd /opt/module-o-mat
+curl -fsSL -o docker-compose.yml \
+  https://raw.githubusercontent.com/Marcel-B/module-o-mat/main/module_o_mat/docker-compose.yml
+curl -fsSL -o .env.example \
+  https://raw.githubusercontent.com/Marcel-B/module-o-mat/main/module_o_mat/.env.example
 cp .env.example .env
+```
+
+3. `.env` anpassen (`hostname -I` für die CT-IP):
+
+```bash
 # SECRET_KEY_BASE aus `mix phx.gen.secret` (lokal erzeugen und eintragen)
 # PHX_HOST=<CT-LAN-IP>
 # PHX_SCHEME=http
 # PORT=4012
 ```
 
-4. Starten:
+4. Image pullen und starten:
 
 ```bash
-docker compose up -d --build
+docker compose pull
+docker compose up -d
 ```
 
+Falls das GHCR-Paket privat ist: einmal `docker login ghcr.io` mit einem
+GitHub-Token (`read:packages`), danach Package unter GitHub → Packages auf
+**Public** stellen (empfohlen für LAN-Homelab).
+
 5. Im LAN-Browser öffnen: `http://<CT-LAN-IP>:4012`
+
+Update später: `docker compose pull && docker compose up -d`
 
 Falls eine Firewall auf Node oder CT aktiv ist, Port `4012` freigeben. Immich
 bleibt unberührt. Später Domain/HTTPS: Reverse-Proxy davor, dann

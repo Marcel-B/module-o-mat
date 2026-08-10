@@ -190,3 +190,43 @@ jobs:
       - name: Auf GitHub Pages veroeffentlichen
         id: deployment
         uses: actions/deploy-pages@v5
+
+  docker:
+    name: Docker Image nach GHCR
+    needs: build-and-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Code auschecken
+        uses: actions/checkout@v4
+
+      - name: Image-Namen (Kleinbuchstaben) setzen
+        run: echo "IMAGE_NAME=ghcr.io/$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')/module-o-mat" >> "$GITHUB_ENV"
+
+      - name: Image-Tags ermitteln
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest
+            type=sha,prefix=
+
+      - name: Bei GHCR anmelden
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Image bauen und pushen
+        uses: docker/build-push-action@v6
+        with:
+          context: module_o_mat
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
