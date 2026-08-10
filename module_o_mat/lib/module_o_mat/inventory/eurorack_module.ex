@@ -10,6 +10,7 @@ defmodule ModuleOMat.Inventory.EurorackModule do
   import Ecto.Changeset
 
   alias ModuleOMat.Inventory.YoutubeVideo
+  alias ModuleOMat.Inventory.ModulePriceObservation
 
   @required_fields [:manufacturer, :name, :hp, :type]
   @optional_fields [
@@ -59,6 +60,8 @@ defmodule ModuleOMat.Inventory.EurorackModule do
       preload_order: [asc: :position],
       on_replace: :delete
     )
+
+    has_many(:price_observations, ModulePriceObservation)
 
     timestamps(type: :utc_datetime)
   end

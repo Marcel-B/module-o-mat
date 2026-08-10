@@ -77,8 +77,28 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
       assert has_element?(view, "#eurorack-module-#{plaits.id}", "200,00 €")
       assert has_element?(view, "#inventory-stats", "2 Module")
       assert has_element?(view, "#inventory-stats", "32")
+      assert has_element?(view, "#inventory-stats", "16,3 cm / 0,16 m")
       assert has_element?(view, "#inventory-stats", "300,00 €")
       assert has_element?(view, "#inventory-stats", "300,50 €")
+    end
+
+    test "zeigt Preisspanne in der Wert-Spalte", %{conn: conn} do
+      module =
+        eurorack_module_fixture(%{
+          manufacturer: "Make Noise",
+          name: "Maths",
+          current_value: "120.00"
+        })
+
+      {:ok, _} =
+        Inventory.create_price_observations(module, [
+          %{amount: "150.00", source: "ebay_sold"},
+          %{amount: "210.00", source: "shop"}
+        ])
+
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      assert has_element?(view, "#eurorack-module-#{module.id}", "150,00–210,00 €")
     end
 
     test "aktualisiert die Fusszeilen-Statistik bei aktivem Filter", %{conn: conn} do

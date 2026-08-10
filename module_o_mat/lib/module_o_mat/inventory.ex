@@ -11,6 +11,7 @@ defmodule ModuleOMat.Inventory do
   alias ModuleOMat.Repo
   alias ModuleOMat.Inventory.EurorackModule
   alias ModuleOMat.Inventory.ManualStorage
+  alias ModuleOMat.Inventory.ModulePriceObservation
   alias ModuleOMat.Inventory.ModuleType
   alias ModuleOMat.Inventory.YoutubeVideo
 
@@ -50,6 +51,9 @@ defmodule ModuleOMat.Inventory do
     |> Repo.all()
   end
 
+  # Eurorack: 1 HP = 0.2 inch = 5.08 mm
+  @hp_mm Decimal.new("5.08")
+
   @doc """
   Liefert Aggregat-Statistiken ueber die (optional gefilterten) nicht
   geloeschten Eurorack-Module.
@@ -61,6 +65,9 @@ defmodule ModuleOMat.Inventory do
 
     * `:count` – Anzahl Module
     * `:total_hp` – Summe der HP
+    * `:total_width_mm` – Breite in mm (`total_hp * 5.08`)
+    * `:total_width_cm` – Breite in cm
+    * `:total_width_m` – Breite in m
     * `:total_purchase_price` – Summe der Kaufpreise (`nil` zaehlt als 0)
     * `:total_current_value` – Summe der aktuellen Werte (`nil` zaehlt als 0)
   """
@@ -76,9 +83,15 @@ defmodule ModuleOMat.Inventory do
       })
       |> Repo.one()
 
+    total_hp = result.total_hp
+    total_width_mm = Decimal.mult(Decimal.new(total_hp), @hp_mm)
+
     %{
       count: result.count,
-      total_hp: result.total_hp,
+      total_hp: total_hp,
+      total_width_mm: total_width_mm,
+      total_width_cm: Decimal.div(total_width_mm, Decimal.new(10)),
+      total_width_m: Decimal.div(total_width_mm, Decimal.new(1000)),
       total_purchase_price: to_decimal(result.total_purchase_price),
       total_current_value: to_decimal(result.total_current_value)
     }
@@ -471,6 +484,214 @@ defmodule ModuleOMat.Inventory do
     |> ensure_youtube_videos_loaded()
     |> EurorackModule.changeset(attrs)
   end
+
+  @doc """
+  Liefert aktive Module fuer die Preisbewertung durch einen Agenten
+  (ohne Soft-Deletes), sortiert nach Hersteller und Name.
+  """
+  def list_modules_for_valuation do
+    EurorackModule
+    |> where([m], is_nil(m.deleted_at))
+    |> order_by([m], asc: m.manufacturer, asc: m.name)
+    |> Repo.all()
+  end
+
+  @doc """
+  Liefert ein Modul inkl. Preisbeobachtungen fuer die Bewertung.
+  Wirft `Ecto.NoResultsError`, falls das Modul fehlt oder soft-geloescht ist.
+  """
+  def get_module_for_valuation!(id) do
+    EurorackModule
+    |> where([m], m.id == ^id and is_nil(m.deleted_at))
+    |> preload(
+      price_observations:
+        ^from(o in ModulePriceObservation, order_by: [desc: o.observed_on, desc: o.id])
+    )
+    |> Repo.one!()
+  end
+
+  @doc """
+  Speichert Preisbeobachtungen fuer ein Modul und aktualisiert `current_value`.
+
+  Optionen:
+
+    * `:set_current_value` – `:median` (Default) setzt den Median der neuen
+      Betraege; alternativ ein expliziter Betrag (`Decimal`, Zahl oder String)
+    * bei `:set_current_value` = `nil` wird `current_value` nicht geaendert
+
+  Liefert `{:ok, %{module: ..., observations: ..., price_range: ...}}` oder
+  `{:error, changeset}`.
+  """
+  def create_price_observations(%EurorackModule{} = eurorack_module, observations, opts \\ [])
+      when is_list(observations) do
+    if observations == [] do
+      {:error, :empty_observations}
+    else
+      set_current_value = Keyword.get(opts, :set_current_value, :median)
+
+      Repo.transaction(fn ->
+        inserted =
+          Enum.map(observations, fn attrs ->
+            attrs = observation_attrs(attrs, eurorack_module.id)
+
+            case %ModulePriceObservation{}
+                 |> ModulePriceObservation.changeset(attrs)
+                 |> Repo.insert() do
+              {:ok, observation} ->
+                observation
+
+              {:error, changeset} ->
+                Repo.rollback(changeset)
+            end
+          end)
+
+        eurorack_module =
+          case resolve_current_value(set_current_value, inserted) do
+            :unchanged ->
+              eurorack_module
+
+            {:ok, value} ->
+              case eurorack_module
+                   |> Ecto.Changeset.change(current_value: value)
+                   |> Repo.update() do
+                {:ok, updated} -> updated
+                {:error, changeset} -> Repo.rollback(changeset)
+              end
+
+            {:error, reason} ->
+              Repo.rollback(reason)
+          end
+
+        %{
+          module: eurorack_module,
+          observations: inserted,
+          price_range: price_range_for_module(eurorack_module.id)
+        }
+      end)
+    end
+  end
+
+  @doc """
+  Aggregierte Preisspanne aller Beobachtungen eines Moduls.
+
+  Liefert `%{min, max, count, last_observed_on}` oder `nil`, wenn keine
+  Beobachtungen existieren.
+  """
+  def price_range_for_module(module_id) when is_integer(module_id) do
+    result =
+      ModulePriceObservation
+      |> where([o], o.eurorack_module_id == ^module_id)
+      |> select([o], %{
+        min: min(o.amount),
+        max: max(o.amount),
+        count: count(o.id),
+        last_observed_on: max(o.observed_on)
+      })
+      |> Repo.one()
+
+    if is_nil(result) or result.count == 0 do
+      nil
+    else
+      %{
+        min: to_decimal(result.min),
+        max: to_decimal(result.max),
+        count: result.count,
+        last_observed_on: result.last_observed_on
+      }
+    end
+  end
+
+  @doc """
+  Liefert eine Map `module_id => price_range` fuer die gegebenen Modul-IDs
+  (fehlende IDs ohne Beobachtungen fehlen in der Map).
+  """
+  def price_ranges_for_modules(module_ids) when is_list(module_ids) do
+    ids = Enum.filter(module_ids, &is_integer/1)
+
+    if ids == [] do
+      %{}
+    else
+      ModulePriceObservation
+      |> where([o], o.eurorack_module_id in ^ids)
+      |> group_by([o], o.eurorack_module_id)
+      |> select(
+        [o],
+        {o.eurorack_module_id,
+         %{
+           min: min(o.amount),
+           max: max(o.amount),
+           count: count(o.id),
+           last_observed_on: max(o.observed_on)
+         }}
+      )
+      |> Repo.all()
+      |> Map.new(fn {id, range} ->
+        {id,
+         %{
+           min: to_decimal(range.min),
+           max: to_decimal(range.max),
+           count: range.count,
+           last_observed_on: range.last_observed_on
+         }}
+      end)
+    end
+  end
+
+  defp observation_attrs(attrs, module_id) when is_map(attrs) do
+    attrs
+    |> Map.new(fn {k, v} -> {to_string(k), v} end)
+    |> Map.put("eurorack_module_id", module_id)
+  end
+
+  defp resolve_current_value(:median, observations) do
+    amounts = Enum.map(observations, & &1.amount)
+    {:ok, median_amount(amounts)}
+  end
+
+  defp resolve_current_value("median", observations),
+    do: resolve_current_value(:median, observations)
+
+  defp resolve_current_value(nil, _observations), do: :unchanged
+
+  defp resolve_current_value(value, _observations) do
+    case cast_decimal(value) do
+      {:ok, decimal} -> {:ok, decimal}
+      :error -> {:error, :invalid_current_value}
+    end
+  end
+
+  defp median_amount([amount]), do: amount
+
+  defp median_amount(amounts) when is_list(amounts) do
+    sorted =
+      amounts
+      |> Enum.map(&to_decimal/1)
+      |> Enum.sort(&(Decimal.compare(&1, &2) != :gt))
+
+    count = length(sorted)
+    mid = div(count, 2)
+
+    if rem(count, 2) == 1 do
+      Enum.at(sorted, mid)
+    else
+      a = Enum.at(sorted, mid - 1)
+      b = Enum.at(sorted, mid)
+      Decimal.div(Decimal.add(a, b), Decimal.new(2))
+    end
+  end
+
+  defp cast_decimal(%Decimal{} = value), do: {:ok, value}
+  defp cast_decimal(value) when is_integer(value), do: {:ok, Decimal.new(value)}
+  defp cast_decimal(value) when is_float(value), do: {:ok, Decimal.from_float(value)}
+
+  defp cast_decimal(value) when is_binary(value) do
+    case Decimal.parse(String.trim(value)) do
+      {decimal, ""} -> {:ok, decimal}
+      _ -> :error
+    end
+  end
+
+  defp cast_decimal(_), do: :error
 
   @doc """
   Exportiert den aktuellen Inventar-Bestand (ohne Soft-Deletes) inkl.

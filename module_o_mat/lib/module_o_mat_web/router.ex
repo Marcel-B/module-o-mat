@@ -28,7 +28,11 @@ defmodule ModuleOMatWeb.Router do
   end
 
   # Other scopes may use custom stacks.
-  # scope "/api", ModuleOMatWeb do
-  #   pipe_through :api
-  # end
+  scope "/api", ModuleOMatWeb.Api do
+    pipe_through :api
+
+    get "/modules", ModuleController, :index
+    get "/modules/:id", ModuleController, :show
+    post "/modules/:id/valuations", ModuleController, :create_valuations
+  end
 end

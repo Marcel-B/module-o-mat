@@ -117,7 +117,7 @@
         <th>Modul</th>
         <th class="w-14 whitespace-nowrap">HP</th>
         <th class="w-24 text-right whitespace-nowrap">Kaufpreis</th>
-        <th class="w-24 text-right whitespace-nowrap">Wert</th>
+        <th class="w-32 text-right whitespace-nowrap">Wert</th>
         <th class="w-60 text-right whitespace-nowrap">Aktionen</th>
       </tr>
     </thead>
@@ -143,8 +143,13 @@
         <td class="w-24 text-right whitespace-nowrap tabular-nums">
           {format_euro(eurorack_module.purchase_price)}
         </td>
-        <td class="w-24 text-right whitespace-nowrap tabular-nums">
-          {format_euro(eurorack_module.current_value)}
+        <td class="w-32 text-right whitespace-nowrap tabular-nums">
+          <span title={price_range_title(Map.get(@price_ranges, eurorack_module.id))}>
+            {format_value_cell(
+              Map.get(@price_ranges, eurorack_module.id),
+              eurorack_module.current_value
+            )}
+          </span>
         </td>
         <td class="w-60 whitespace-nowrap">
           <div class="flex shrink-0 gap-1 justify-end">
@@ -212,11 +217,16 @@
           {@inventory_stats.count}
           {if @inventory_stats.count == 1, do: "Modul", else: "Module"}
         </td>
-        <td class="w-14 whitespace-nowrap tabular-nums">{@inventory_stats.total_hp}</td>
+        <td class="w-14 whitespace-nowrap tabular-nums">
+          <span>{@inventory_stats.total_hp}</span>
+          <span class="block text-xs font-normal text-base-content/60 whitespace-nowrap">
+            {format_hp_width(@inventory_stats)}
+          </span>
+        </td>
         <td class="w-24 text-right whitespace-nowrap tabular-nums">
           {format_euro_sum(@inventory_stats.total_purchase_price)}
         </td>
-        <td class="w-24 text-right whitespace-nowrap tabular-nums">
+        <td class="w-32 text-right whitespace-nowrap tabular-nums">
           {format_euro_sum(@inventory_stats.total_current_value)}
         </td>
         <td class="w-60"></td>
