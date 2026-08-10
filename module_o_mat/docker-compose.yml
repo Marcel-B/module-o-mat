@@ -5,6 +5,9 @@ services:
       - "${PORT:-4000}:4000"
     environment:
       PHX_HOST: ${PHX_HOST:-localhost}
+      PHX_SCHEME: ${PHX_SCHEME:-https}
+      # Public URL port (host mapping); container always binds 4000 internally
+      PHX_PORT: ${PORT:-4000}
       SECRET_KEY_BASE: ${SECRET_KEY_BASE:?SECRET_KEY_BASE must be set}
       PORT: "4000"
       DATABASE_PATH: /data/module_o_mat.db

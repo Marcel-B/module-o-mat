@@ -52,7 +52,9 @@ unter `/data` (Datenbank + PDF-Anleitungen).
 cp .env.example .env
 mix phx.gen.secret
 # Wert als SECRET_KEY_BASE in .env eintragen
-# PHX_HOST auf den öffentlichen Hostnamen setzen (ohne https://)
+# PHX_HOST auf Hostnamen oder LAN-IP setzen (ohne Schema)
+# LAN: PHX_SCHEME=http und PORT=4012 (o.ä.)
+# Hinter Proxy: PHX_SCHEME=https und PHX_HOST=dein.hostname
 ```
 
 2. Bauen und starten:
@@ -66,16 +68,17 @@ podman compose up -d --build
 # alternativ: podman build -t module_o_mat . && podman run ...
 ```
 
-Beim Start werden Migrationen automatisch ausgeführt. Die App lauscht auf Port
-`4000` (über `PORT` in `.env` am Host mappbar).
+Beim Start werden Migrationen automatisch ausgeführt. Die App lauscht im
+Container auf Port `4000` (über `PORT` in `.env` am Host mappbar).
 
 3. Persistenz: Das Compose-Volume `module_o_mat_data` hält
    `/data/module_o_mat.db` und `/data/uploads/manuals`. Ohne Volume gehen
    Daten bei Container-Neustarts verloren.
 
-4. Reverse-Proxy: TLS und `X-Forwarded-Proto` am Proxy terminieren. Die App
-   erzwingt HTTPS über `force_ssl` mit `rewrite_on: [:x_forwarded_proto]` und
-   erwartet `PHX_HOST` als öffentlichen Hostnamen.
+4. Reverse-Proxy (optional): TLS und `X-Forwarded-Proto` am Proxy terminieren,
+   dann `PHX_SCHEME=https` und `PHX_HOST` auf den öffentlichen Hostnamen setzen.
+   Zusätzlich in `config/prod.exs` wieder `force_ssl` aktivieren und Image neu
+   bauen. Für reinen LAN-Zugriff über `http://IP:PORT` ist kein Proxy nötig.
 
 Nur Image bauen:
 
@@ -83,6 +86,37 @@ Nur Image bauen:
 docker build -t module_o_mat .
 # oder: podman build -t module_o_mat .
 ```
+
+## Deploy auf Proxmox (LAN, eigener CT)
+
+Nicht im Immich-CT mitinstallieren — eigener LXC hält Updates, Backups und
+Ressourcen getrennt.
+
+1. In Proxmox **Erstelle CT**: Debian 12, unprivileged, 1–2 vCPU, ~1–2 GB RAM,
+   ~8–16 GB Disk (`local-lvm`), DHCP oder feste LAN-IP.
+2. Im CT Docker installieren, dieses Repo klonen (oder den Quellbaum
+   kopieren).
+3. `.env` anlegen, z. B.:
+
+```bash
+cp .env.example .env
+# SECRET_KEY_BASE aus `mix phx.gen.secret` (lokal erzeugen und eintragen)
+# PHX_HOST=<CT-LAN-IP>
+# PHX_SCHEME=http
+# PORT=4012
+```
+
+4. Starten:
+
+```bash
+docker compose up -d --build
+```
+
+5. Im LAN-Browser öffnen: `http://<CT-LAN-IP>:4012`
+
+Falls eine Firewall auf Node oder CT aktiv ist, Port `4012` freigeben. Immich
+bleibt unberührt. Später Domain/HTTPS: Reverse-Proxy davor, dann
+`PHX_SCHEME=https`, `force_ssl` in `prod.exs` wieder einschalten und neu bauen.
 
 ## Dokumentation
 
