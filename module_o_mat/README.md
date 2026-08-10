@@ -80,9 +80,19 @@ Container auf Port `4000` (über `PORT` in `.env` am Host mappbar).
    Daten bei Container-Neustarts verloren.
 
 4. Reverse-Proxy (optional): TLS und `X-Forwarded-Proto` am Proxy terminieren,
-   dann `PHX_SCHEME=https` und `PHX_HOST` auf den öffentlichen Hostnamen setzen.
-   Zusätzlich in `config/prod.exs` wieder `force_ssl` aktivieren und Image neu
-   bauen. Für reinen LAN-Zugriff über `http://IP:PORT` ist kein Proxy nötig.
+   dann in `.env` setzen:
+
+```bash
+PHX_HOST=module.lan
+PHX_SCHEME=https
+PHX_PORT=443
+PHX_FORCE_SSL=true
+PHX_CHECK_ORIGIN=https://module.lan
+```
+
+   Danach `docker compose up -d` (kein Image-Rebuild nötig — `PHX_FORCE_SSL` ist
+   Runtime-Config). Für reinen LAN-Zugriff über `http://IP:PORT` ist kein Proxy
+   nötig und `PHX_FORCE_SSL` bleibt aus.
 
 ## Deploy auf Proxmox (LAN, eigener CT)
 
@@ -132,11 +142,38 @@ cp .env.example .env
 #   PORT=4012
 #   PHX_PORT=80
 #   PHX_CHECK_ORIGIN=http://module.lan,http://<CT-LAN-IP>:4012
+#
+# Hinter NPM mit HTTPS (https://module.lan):
+#   PHX_HOST=module.lan
+#   PHX_SCHEME=https
+#   PORT=4012
+#   PHX_PORT=443
+#   PHX_FORCE_SSL=true
+#   PHX_CHECK_ORIGIN=https://module.lan
 ```
 
 `PHX_HOST` muss dem Hostnamen in der Browser-URL entsprechen. Sonst lehnt
 Phoenix LiveView-WebSockets mit `403` ab und fällt in eine Longpoll-
 Reconnect-Schleife.
+
+#### HTTPS in Nginx Proxy Manager (LAN / `module.lan`)
+
+`module.lan` ist typischerweise **nicht** öffentlich — Let’s Encrypt per HTTP-Challenge
+funktioniert dann nicht. In NPM:
+
+1. **SSL Certificates** → **Add SSL Certificate** → **Custom** (oder „Self Signed“):
+   Domain `module.lan`, Zertifikat erzeugen/hochladen.
+2. **Hosts** → Proxy Host für `module.lan`:
+   - Scheme/Forward: `http://<CT-LAN-IP>:4012` (App bleibt HTTP intern)
+   - **Websockets Support**: an
+   - **Block Common Exploits**: optional an
+   - Tab **SSL**: Zertifikat wählen, **Force SSL** an, **HTTP/2** an
+3. App-`.env` wie oben auf `PHX_SCHEME=https` / `PHX_PORT=443` / `PHX_FORCE_SSL=true`
+   umstellen und Stack neu starten: `docker compose up -d`
+4. Browser: `https://module.lan` öffnen. Bei selbstsigniertem Zertifikat einmalig
+   die Warnung bestätigen (oder das NPM-Root-CA im System/Browser importieren).
+
+Firefox mit HTTPS-Only-Mode braucht `https://` — genau dieses Setup.
 
 4. Image pullen und starten:
 
@@ -150,12 +187,13 @@ GitHub-Token (`read:packages`), danach Package unter GitHub → Packages auf
 **Public** stellen (empfohlen für LAN-Homelab).
 
 5. Im LAN-Browser öffnen: `http://<CT-LAN-IP>:4012` bzw. `http://module.lan`
+   (mit TLS: `https://module.lan`)
 
 Update später: `docker compose pull && docker compose up -d`
 
 Falls eine Firewall auf Node oder CT aktiv ist, Port `4012` freigeben. Immich
-bleibt unberührt. Später Domain/HTTPS: Reverse-Proxy davor, dann
-`PHX_SCHEME=https`, `force_ssl` in `prod.exs` wieder einschalten und neu bauen.
+bleibt unberührt. HTTPS: TLS am Reverse-Proxy terminieren und `.env` wie oben
+auf `PHX_SCHEME=https` / `PHX_FORCE_SSL=true` stellen — kein Image-Rebuild nötig.
 
 ## Dokumentation
 
