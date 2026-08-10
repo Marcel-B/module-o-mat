@@ -683,7 +683,9 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
       "current_draw_plus5v_ma",
       "depth_mm",
       "description",
-      "manual_url"
+      "manual_url",
+      "purchase_price",
+      "current_value"
     ]
 
     params =

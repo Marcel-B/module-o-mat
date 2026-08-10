@@ -423,6 +423,39 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
              )
     end
 
+    test "behaelt Kaufpreis und Wert nach Subtyp-Toggle", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/eurorack_modules/new")
+
+      view
+      |> form("#eurorack-module-form",
+        eurorack_module: %{
+          "manufacturer" => "Make Noise",
+          "name" => "Maths",
+          "hp" => "20",
+          "type" => "Envelope",
+          "purchase_price" => "249.99",
+          "current_value" => "199.50"
+        }
+      )
+      |> render_change()
+
+      assert has_element?(view, "#subtype-chip-LFO")
+
+      view
+      |> element("#subtype-chip-LFO")
+      |> render_click()
+
+      assert has_element?(
+               view,
+               "#eurorack-module-form input[name='eurorack_module[purchase_price]'][value='249.99']"
+             )
+
+      assert has_element?(
+               view,
+               "#eurorack-module-form input[name='eurorack_module[current_value]'][value='199.50']"
+             )
+    end
+
     test "speichert gewaehlte Subtypen mit dem Modul", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/eurorack_modules/new")
 
