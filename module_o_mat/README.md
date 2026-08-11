@@ -195,6 +195,31 @@ Falls eine Firewall auf Node oder CT aktiv ist, Port `4012` freigeben. Immich
 bleibt unberührt. HTTPS: TLS am Reverse-Proxy terminieren und `.env` wie oben
 auf `PHX_SCHEME=https` / `PHX_FORCE_SSL=true` stellen — kein Image-Rebuild nötig.
 
+### Nextcloud-Backup (optional)
+
+Die App kann täglich ein Inventar-ZIP per WebDAV nach Nextcloud (z.B. Hetzner)
+hochladen. Es liegen immer sieben Dateien (`inventory-mon.zip` …
+`inventory-sun.zip`); der aktuelle Wochentag wird überschrieben.
+
+1. In Nextcloud unter Einstellungen → Sicherheit ein **App-Passwort** erzeugen.
+2. Zielordner anlegen, z.B. `Backups/module-o-mat`.
+3. In `.env` setzen:
+
+```bash
+NEXTCLOUD_BACKUP_ENABLED=true
+NEXTCLOUD_WEBDAV_URL=https://nxNNNN.your-storageshare.de/remote.php/dav/files/USER/Backups/module-o-mat
+NEXTCLOUD_USERNAME=USER
+NEXTCLOUD_APP_PASSWORD=xxxx-xxxx-xxxx-xxxx
+NEXTCLOUD_BACKUP_AT=03:00
+NEXTCLOUD_BACKUP_TIMEZONE=Europe/Berlin
+```
+
+4. Stack neu starten: `docker compose up -d`
+
+Wiederherstellen: ZIP aus Nextcloud laden und über die UI unter `/backup` oder
+mit `mix inventory.import path/to/inventory-mon.zip` importieren (ersetzt alle
+Inventardaten).
+
 ## Dokumentation
 
 Dokumentation kann lokal mit [ExDoc](https://github.com/elixir-lang/ex_doc)

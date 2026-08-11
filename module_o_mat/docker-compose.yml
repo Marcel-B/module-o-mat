@@ -17,6 +17,12 @@ services:
       PORT: "4000"
       DATABASE_PATH: /data/module_o_mat.db
       MANUAL_UPLOADS_DIR: /data/uploads/manuals
+      NEXTCLOUD_BACKUP_ENABLED: ${NEXTCLOUD_BACKUP_ENABLED:-false}
+      NEXTCLOUD_WEBDAV_URL: ${NEXTCLOUD_WEBDAV_URL:-}
+      NEXTCLOUD_USERNAME: ${NEXTCLOUD_USERNAME:-}
+      NEXTCLOUD_APP_PASSWORD: ${NEXTCLOUD_APP_PASSWORD:-}
+      NEXTCLOUD_BACKUP_AT: ${NEXTCLOUD_BACKUP_AT:-03:00}
+      NEXTCLOUD_BACKUP_TIMEZONE: ${NEXTCLOUD_BACKUP_TIMEZONE:-Europe/Berlin}
     volumes:
       - module_o_mat_data:/data
     restart: unless-stopped

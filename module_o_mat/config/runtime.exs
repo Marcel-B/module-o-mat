@@ -125,3 +125,27 @@ else
     config :module_o_mat, :manual_uploads_dir, manual_uploads_dir
   end
 end
+
+# Optional daily Nextcloud backup (WebDAV). Disabled unless explicitly enabled.
+nextcloud_backup_enabled? =
+  System.get_env("NEXTCLOUD_BACKUP_ENABLED") in ~w(1 true TRUE yes YES)
+
+if nextcloud_backup_enabled? do
+  backup_at =
+    case System.get_env("NEXTCLOUD_BACKUP_AT", "03:00") do
+      <<h::binary-size(2), ?:, m::binary-size(2)>> ->
+        {String.to_integer(h), String.to_integer(m)}
+
+      other ->
+        raise "NEXTCLOUD_BACKUP_AT must be HH:MM, got: #{inspect(other)}"
+    end
+
+  config :module_o_mat, ModuleOMat.Inventory.RemoteBackup,
+    enabled: true,
+    base_url: System.get_env("NEXTCLOUD_WEBDAV_URL"),
+    username: System.get_env("NEXTCLOUD_USERNAME"),
+    password: System.get_env("NEXTCLOUD_APP_PASSWORD"),
+    at: backup_at,
+    timezone: System.get_env("NEXTCLOUD_BACKUP_TIMEZONE") || "Europe/Berlin",
+    ensure_collection: true
+end
