@@ -5,6 +5,14 @@ config :module_o_mat,
   generators: [timestamp_type: :utc_datetime],
   manual_storage_adapter: ModuleOMat.Inventory.ManualStorage.LocalDisk
 
+config :elixir, :time_zone_database, Tzdata.TimeZoneDatabase
+
+config :module_o_mat, ModuleOMat.Inventory.RemoteBackup,
+  enabled: false,
+  ensure_collection: true,
+  at: {3, 0},
+  timezone: "Europe/Berlin"
+
 # Configure the endpoint
 config :module_o_mat, ModuleOMatWeb.Endpoint,
   url: [host: "localhost"],
