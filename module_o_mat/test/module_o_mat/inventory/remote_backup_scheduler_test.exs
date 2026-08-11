@@ -67,4 +67,31 @@ defmodule ModuleOMat.Inventory.RemoteBackupSchedulerTest do
     send(pid, :run_backup)
     assert_receive :backup_ran, 1_000
   end
+
+  test "Scheduler bleibt bei Exception im Job am Leben" do
+    test_pid = self()
+
+    run_fun = fn ->
+      send(test_pid, :about_to_raise)
+      raise "boom"
+    end
+
+    assert {:ok, pid} =
+             start_supervised(
+               {RemoteBackupScheduler,
+                [
+                  enabled: true,
+                  base_url: "https://example.test/dav",
+                  username: "u",
+                  password: "p",
+                  at: {3, 0},
+                  timezone: "Europe/Berlin",
+                  run_fun: run_fun
+                ]}
+             )
+
+    send(pid, :run_backup)
+    assert_receive :about_to_raise, 1_000
+    assert %{at: {3, 0}} = :sys.get_state(pid)
+  end
 end

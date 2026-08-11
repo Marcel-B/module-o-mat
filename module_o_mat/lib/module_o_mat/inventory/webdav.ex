@@ -34,7 +34,8 @@ defmodule ModuleOMat.Inventory.WebDAV do
       when is_binary(base_url) and is_list(opts) do
     url = String.trim_trailing(base_url, "/")
 
-    case request(:mkcol, url, auth_and_req_opts(opts)) do
+    # Finch accepts only a few methods as atoms; MKCOL must be a binary.
+    case request("MKCOL", url, auth_and_req_opts(opts)) do
       {:ok, %Req.Response{status: status}} when status in [201, 405, 409] ->
         :ok
 
