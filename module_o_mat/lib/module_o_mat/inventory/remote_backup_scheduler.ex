@@ -81,7 +81,16 @@ defmodule ModuleOMat.Inventory.RemoteBackupScheduler do
 
   @impl true
   def handle_info(:run_backup, state) do
-    _ = state.run_fun.()
+    try do
+      _ = state.run_fun.()
+    rescue
+      error ->
+        Logger.error(
+          "Nextcloud-Backup-Job abgestürzt: #{Exception.message(error)}\n" <>
+            Exception.format_stacktrace(__STACKTRACE__)
+        )
+    end
+
     {:noreply, schedule_next(state)}
   end
 
