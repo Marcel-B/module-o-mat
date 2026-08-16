@@ -29,8 +29,8 @@ function show(event: MouseEvent) {
   iframe.src = props.embedUrl;
   iframe.title = "YouTube-Vorschau";
   iframe.className = "block aspect-video h-auto w-full border-0";
-  iframe.referrerPolicy = "strict-origin-when-cross-origin";
-  iframe.loading = "lazy";
+  iframe.allow =
+    "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
   iframe.allowFullscreen = true;
   node.appendChild(iframe);
   document.body.appendChild(node);

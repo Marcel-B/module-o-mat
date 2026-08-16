@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
-import { formatEuro, formatEuroRange } from "../utils/format";
+import { formatEuro, formatEuroRange, formatHpWidth } from "../utils/format";
 import { youtubeEmbedUrl, youtubeWatchUrl } from "../utils/youtube";
 import type { InventoryStats, Module, ModuleGroup } from "../types";
 import YoutubeHoverPreview from "@/components/YoutubeHoverPreview.vue";
@@ -23,6 +23,38 @@ interface Emits {
 const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
 const router = useRouter();
+
+type TableFilters = {
+  global: { value: string | null; matchMode: string };
+  type: { value: string | null; matchMode: string };
+  manufacturer: { value: string | null; matchMode: string };
+  hp: { value: number | null; matchMode: string };
+};
+
+const filters = ref<TableFilters>({
+  global: { value: null, matchMode: "contains" },
+  type: { value: null, matchMode: "equals" },
+  manufacturer: { value: null, matchMode: "equals" },
+  hp: { value: null, matchMode: "equals" },
+});
+
+function filterHasValue(value: string | number | null): boolean {
+  if (value == null) return false;
+  if (typeof value === "string") return value.trim() !== "";
+  return true;
+}
+
+const tableFiltersActive = computed(() =>
+  Object.values(filters.value).some((constraint) => filterHasValue(constraint.value)),
+);
+
+function clearTableFilters() {
+  filters.value.global.value = null;
+  filters.value.type.value = null;
+  filters.value.manufacturer.value = null;
+  filters.value.hp.value = null;
+}
+
 // Menü-Items werden in `items` gehalten
 const activeModule = ref<Module | null>(null);
 
@@ -37,6 +69,13 @@ function primaryVideo(module: Module) {
 function getName(module: Module) {
   return `${module.manufacturer} - ${module.name}`;
 }
+
+const tableModules = computed(() =>
+  props.modules.map((module) => ({
+    ...module,
+    subtypesText: (module.subtypes ?? []).join(" "),
+  })),
+);
 const menu = ref();
 const items = ref([
   {
@@ -73,13 +112,77 @@ const toggle = (event: Event, data: Module) => {
 
 <template>
   <DataTable
-    :value="modules"
+    :value="tableModules"
+    v-model:filters="filters"
     size="small"
     row-group-mode="subheader"
     scrollable
+    scroll-height="calc(100vh - 20rem)"
+    :global-filter-fields="['type', 'subtypesText', 'manufacturer', 'name', 'hp']"
     group-rows-by="type"
+    class="text-sm"
     responsive-layout="scroll"
   >
+  <template #header>
+    <div>
+      <h1 class="text-xl font-semibold mb-4">Eurorack-Module</h1>
+
+    <div class="flex flex-wrap items-center gap-2">
+        <FloatLabel variant="on">
+          <IconField>
+            <InputIcon class="pi pi-search text-sm" />
+            <InputText
+              v-model="filters.global.value"
+              size="small"
+              class="w-44"
+              v-tooltip.top="'Suche in allen Spalten'"
+            />
+          </IconField>
+          <label class="text-xs" for="module-search-input">Suche</label>
+        </FloatLabel>
+        <FloatLabel variant="on">
+          <Select
+            v-model="filters.type.value"
+            :options="groups.map((g) => g.type)"
+            show-clear
+            size="small"
+            class="w-36"
+            v-tooltip.top="'Filter nach Typ'"
+          />
+          <label class="text-xs" for="module-type-filter">Typ</label>
+        </FloatLabel>
+        <FloatLabel variant="on">
+          <InputNumber
+            v-model="filters.hp.value"
+            size="small"
+            input-class="w-20"
+            v-tooltip.top="'Filter nach min-HP'"
+          />
+          <label class="text-xs" for="module-min-hp">Min HP</label>
+        </FloatLabel>
+        <FloatLabel variant="on">
+          <InputNumber
+            v-model="filters.hp.value"
+            size="small"
+            input-class="w-20"
+            v-tooltip.top="'Filter nach max-HP'"
+          />
+          <label class="text-xs" for="module-purchase-price">Max HP</label>
+        </FloatLabel>
+        <Button
+          v-if="tableFiltersActive"
+          icon="pi pi-filter-slash"
+          severity="secondary"
+          size="small"
+          text
+          rounded
+          v-tooltip.top="'Filter zurücksetzen'"
+          @click="clearTableFilters"
+        />
+    </div>
+    </div>
+
+  </template>
     <template #empty>
       <p
         v-if="!loading && modules.length === 0"
@@ -88,6 +191,27 @@ const toggle = (event: Event, data: Module) => {
       >
         {{ emptyMessage }}
       </p>
+    </template>
+    <template #loading>
+      <ProgressBar mode="indeterminate" style="height: 3px" />
+    </template>
+    <template #footer>
+<div class="flex gap-4 align-baseline text-xs font-medium" v-if="stats">
+   <span>
+      {{ stats.count }} {{ stats.count === 1 ? "Modul" : "Module" }}
+   </span>
+   <span>
+             {{ stats.total_hp }} HP entspricht {{ formatHpWidth(stats) }}
+   </span>
+<span>
+
+   Kaufpreis:         {{ formatEuro(stats.total_purchase_price) }}
+</span>
+<span>
+
+Wert: {{ formatEuro(stats.total_current_value) }}
+</span>
+</div>
     </template>
     <Column field="type" header="Typ" />
     <Column field="name" header="Name">

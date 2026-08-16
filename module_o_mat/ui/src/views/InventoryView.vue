@@ -8,7 +8,6 @@ import { useInventoryStore } from '../stores/inventory'
 import { ApiError } from '../api/client'
 import { routeParam } from '../utils/format'
 import type { Module, ModuleFormMode, ModuleFormSubmit, ModuleType } from '../types'
-import ModuleFilters from '@/components/ModuleFilters.vue'
 import ModuleTable from '@/components/ModuleTable.vue'
 import ModuleDialog from '@/components/ModuleDialog.vue'
 import TypeManagerDialog from '@/components/TypeManagerDialog.vue'
@@ -197,9 +196,7 @@ async function onImportBackup(file: File | null) {
 </script>
 
 <template>
-  <div class="mb-5 flex flex-wrap items-start justify-between gap-4">
-    <h1 class="m-0 text-[1.35rem] font-semibold">Eurorack-Module</h1>
-    <div class="flex flex-wrap gap-2">
+  <div class="mb-5 flex items-end gap-4">
       <Button id="backup-button" label="Datensicherung" severity="secondary" @click="router.push('/backup')" />
       <Button
         id="manage-module-types-button"
@@ -208,10 +205,7 @@ async function onImportBackup(file: File | null) {
         @click="router.push('/types')"
       />
       <Button id="new-eurorack-module-button" label="Neues Modul" @click="router.push('/modules/new')" />
-    </div>
   </div>
-
-  <ModuleFilters />
 
   <ModuleTable
     :modules="modules"
