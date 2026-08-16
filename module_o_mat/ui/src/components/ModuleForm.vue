@@ -21,12 +21,13 @@ interface Props {
   saving?: boolean
 }
 
-const props = defineProps<Props>()
-
-const emit = defineEmits<{
+interface Emits {
   submit: [value: ModuleFormSubmit]
   cancel: []
-}>()
+}
+
+const props = defineProps<Props>()
+const emit = defineEmits<Emits>()
 
 const readonly = computed(() => props.mode === 'show')
 const submitLabel = computed(() => (props.mode === 'edit' ? 'Aktualisieren' : 'Speichern'))

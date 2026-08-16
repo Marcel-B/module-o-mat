@@ -11,11 +11,12 @@ interface Props {
   module?: Module | null
 }
 
-const props = defineProps<Props>()
-
-const emit = defineEmits<{
+interface Emits {
   close: []
-}>()
+}
+
+const props = defineProps<Props>()
+const emit = defineEmits<Emits>()
 const canvas = ref<HTMLCanvasElement | null>(null)
 let chart: ChartJS | null = null
 let tooltipEl: HTMLDivElement | null = null

@@ -10,6 +10,13 @@ interface Props {
   types?: ModuleType[]
 }
 
+interface Emits {
+  close: []
+  create: [name: string]
+  rename: [value: { id: number; name: string }]
+  delete: [type: ModuleType]
+}
+
 withDefaults(
   defineProps<Props>(),
   {
@@ -17,12 +24,7 @@ withDefaults(
   },
 )
 
-const emit = defineEmits<{
-  close: []
-  create: [name: string]
-  rename: [value: { id: number; name: string }]
-  delete: [type: ModuleType]
-}>()
+const emit = defineEmits<Emits>()
 
 const editingId = ref<number | null>(null)
 

@@ -15,11 +15,12 @@ interface Props {
   loading?: boolean
 }
 
-const props = defineProps<Props>()
-
-const emit = defineEmits<{
+interface Emits {
   delete: [module: Module]
-}>()
+}
+
+const props = defineProps<Props>()
+const emit = defineEmits<Emits>()
 const router = useRouter()
 const menu = ref<{ toggle: (event: Event) => void } | null>(null)
 const menuItems = ref<MenuItem[]>([])

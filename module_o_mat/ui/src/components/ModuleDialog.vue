@@ -12,6 +12,11 @@ interface Props {
   saving?: boolean
 }
 
+interface Emits {
+  close: []
+  submit: [value: ModuleFormSubmit]
+}
+
 const props = withDefaults(
   defineProps<Props>(),
   {
@@ -21,10 +26,7 @@ const props = withDefaults(
   },
 )
 
-const emit = defineEmits<{
-  close: []
-  submit: [value: ModuleFormSubmit]
-}>()
+const emit = defineEmits<Emits>()
 
 const title = computed(() => {
   if (props.mode === 'edit') return 'Modul bearbeiten'

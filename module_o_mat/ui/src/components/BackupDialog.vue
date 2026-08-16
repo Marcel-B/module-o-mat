@@ -6,13 +6,14 @@ interface Props {
   visible?: boolean
 }
 
-defineProps<Props>()
-
-const emit = defineEmits<{
+interface Emits {
   close: []
   export: []
   import: [file: File | null]
-}>()
+}
+
+defineProps<Props>()
+const emit = defineEmits<Emits>()
 const zipFile = ref<File | null>(null)
 
 function onSelect(event: FileUploadSelectEvent) {
