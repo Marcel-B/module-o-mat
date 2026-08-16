@@ -6,7 +6,7 @@ import MaintenanceOverlay from './components/MaintenanceOverlay.vue'
 <template>
   <div class="min-h-screen">
     <AppHeader />
-    <main class="mx-auto max-w-[56rem] px-6 pb-16 pt-8 max-[780px]:px-4 max-[780px]:pb-12 max-[780px]:pt-5">
+    <main class="mx-auto max-w-[90rem] px-6 pb-16 pt-8 max-[780px]:px-4 max-[780px]:pb-12 max-[780px]:pt-5">
       <router-view />
     </main>
     <Toast position="top-right" />
