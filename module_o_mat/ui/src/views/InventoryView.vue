@@ -8,11 +8,11 @@ import { useInventoryStore } from '../stores/inventory'
 import { ApiError } from '../api/client'
 import { routeParam } from '../utils/format'
 import type { Module, ModuleFormMode, ModuleFormSubmit, ModuleType } from '../types'
-import ModuleFilters from '../components/ModuleFilters.vue'
-import ModuleTable from '../components/ModuleTable.vue'
-import ModuleDialog from '../components/ModuleDialog.vue'
-import TypeManagerDialog from '../components/TypeManagerDialog.vue'
-import BackupDialog from '../components/BackupDialog.vue'
+import ModuleFilters from '@/components/ModuleFilters.vue'
+import ModuleTable from '@/components/ModuleTable.vue'
+import ModuleDialog from '@/components/ModuleDialog.vue'
+import TypeManagerDialog from '@/components/TypeManagerDialog.vue'
+import BackupDialog from '@/components/BackupDialog.vue'
 
 const PriceHistoryDialog = defineAsyncComponent(
   () => import('../components/PriceHistoryDialog.vue'),
