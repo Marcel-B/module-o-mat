@@ -9,6 +9,7 @@ defmodule ModuleOMatWeb.Api.OpenApiTest do
       assert Map.has_key?(paths, "/api/v1/modules")
       assert Map.has_key?(paths, "/api/v1/module-types")
       assert Map.has_key?(paths, "/api/v1/backup/export")
+      assert Map.has_key?(paths, "/api/v1/maintenance")
     end
   end
 

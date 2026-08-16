@@ -140,6 +140,30 @@ if nextcloud_backup_enabled? do
         raise "NEXTCLOUD_BACKUP_AT must be HH:MM, got: #{inspect(other)}"
     end
 
+  backup_idle_ms =
+    case System.get_env("NEXTCLOUD_BACKUP_IDLE_MINUTES", "10") do
+      minutes when is_binary(minutes) ->
+        parsed = String.to_integer(minutes)
+
+        if parsed < 1 do
+          raise "NEXTCLOUD_BACKUP_IDLE_MINUTES must be >= 1, got: #{inspect(minutes)}"
+        end
+
+        parsed * 60_000
+    end
+
+  backup_http_timeout_ms =
+    case System.get_env("NEXTCLOUD_BACKUP_HTTP_TIMEOUT_SECONDS", "300") do
+      seconds when is_binary(seconds) ->
+        parsed = String.to_integer(String.trim(seconds))
+
+        if parsed < 30 do
+          raise "NEXTCLOUD_BACKUP_HTTP_TIMEOUT_SECONDS must be >= 30, got: #{inspect(seconds)}"
+        end
+
+        parsed * 1_000
+    end
+
   config :module_o_mat, ModuleOMat.Inventory.RemoteBackup,
     enabled: true,
     base_url: System.get_env("NEXTCLOUD_WEBDAV_URL"),
@@ -147,5 +171,9 @@ if nextcloud_backup_enabled? do
     password: System.get_env("NEXTCLOUD_APP_PASSWORD"),
     at: backup_at,
     timezone: System.get_env("NEXTCLOUD_BACKUP_TIMEZONE") || "Europe/Berlin",
+    idle_after_ms: backup_idle_ms,
+    maintenance_grace_ms: 2_000,
+    receive_timeout: backup_http_timeout_ms,
+    timeout_ms: backup_http_timeout_ms * 3 + 60_000,
     ensure_collection: true
 end

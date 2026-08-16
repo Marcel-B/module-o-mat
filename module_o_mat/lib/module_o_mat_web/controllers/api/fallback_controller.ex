@@ -46,4 +46,10 @@ defmodule ModuleOMatWeb.Api.FallbackController do
   def call(conn, {:error, :invalid_current_value}) do
     call(conn, {:error, {:unprocessable, "current_value ist ungueltig"}})
   end
+
+  def call(conn, {:error, :maintenance}) do
+    conn
+    |> put_status(:service_unavailable)
+    |> json(%{error: "Datensicherung laeuft. Bitte warte einen Moment."})
+  end
 end

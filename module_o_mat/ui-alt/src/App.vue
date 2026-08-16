@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
+import MaintenanceOverlay from './components/MaintenanceOverlay.vue'
 
 const logoSrc = `${import.meta.env.BASE_URL}logo.svg`
 </script>
@@ -18,5 +19,6 @@ const logoSrc = `${import.meta.env.BASE_URL}logo.svg`
     </main>
     <Toast />
     <ConfirmDialog />
+    <MaintenanceOverlay />
   </div>
 </template>

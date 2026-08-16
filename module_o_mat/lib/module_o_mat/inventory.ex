@@ -13,6 +13,7 @@ defmodule ModuleOMat.Inventory do
   alias ModuleOMat.Inventory.ManualStorage
   alias ModuleOMat.Inventory.ModulePriceObservation
   alias ModuleOMat.Inventory.ModuleType
+  alias ModuleOMat.Inventory.RemoteBackupScheduler
   alias ModuleOMat.Inventory.YoutubeVideo
 
   @doc """
@@ -227,9 +228,11 @@ defmodule ModuleOMat.Inventory do
   Verfuegung steht.
   """
   def create_module_type(attrs \\ %{}) do
-    %ModuleType{}
-    |> ModuleType.changeset(attrs)
-    |> Repo.insert()
+    with_write(fn ->
+      %ModuleType{}
+      |> ModuleType.changeset(attrs)
+      |> Repo.insert()
+    end)
   end
 
   @doc """
@@ -253,26 +256,28 @@ defmodule ModuleOMat.Inventory do
   end
 
   def update_module_type(%ModuleType{} = module_type, attrs) do
-    old_name = module_type.name
+    with_write(fn ->
+      old_name = module_type.name
 
-    Repo.transaction(fn ->
-      case module_type |> ModuleType.changeset(attrs) |> Repo.update() do
-        {:ok, updated} ->
-          if updated.name != old_name do
-            EurorackModule
-            |> where([m], m.type == ^old_name)
-            |> Repo.update_all(set: [type: updated.name])
+      Repo.transaction(fn ->
+        case module_type |> ModuleType.changeset(attrs) |> Repo.update() do
+          {:ok, updated} ->
+            if updated.name != old_name do
+              EurorackModule
+              |> where([m], m.type == ^old_name)
+              |> Repo.update_all(set: [type: updated.name])
 
-            old_name
-            |> modules_with_subtype()
-            |> replace_subtype_name(old_name, updated.name)
-          end
+              old_name
+              |> modules_with_subtype()
+              |> replace_subtype_name(old_name, updated.name)
+            end
 
-          updated
+            updated
 
-        {:error, changeset} ->
-          Repo.rollback(changeset)
-      end
+          {:error, changeset} ->
+            Repo.rollback(changeset)
+        end
+      end)
     end)
   end
 
@@ -289,19 +294,21 @@ defmodule ModuleOMat.Inventory do
   end
 
   def delete_module_type(%ModuleType{} = module_type) do
-    Repo.transaction(fn ->
-      EurorackModule
-      |> where([m], m.type == ^module_type.name)
-      |> Repo.update_all(set: [type: @fallback_type_name])
+    with_write(fn ->
+      Repo.transaction(fn ->
+        EurorackModule
+        |> where([m], m.type == ^module_type.name)
+        |> Repo.update_all(set: [type: @fallback_type_name])
 
-      module_type.name
-      |> modules_with_subtype()
-      |> remove_subtype_name(module_type.name)
+        module_type.name
+        |> modules_with_subtype()
+        |> remove_subtype_name(module_type.name)
 
-      case Repo.delete(module_type) do
-        {:ok, deleted} -> deleted
-        {:error, changeset} -> Repo.rollback(changeset)
-      end
+        case Repo.delete(module_type) do
+          {:ok, deleted} -> deleted
+          {:error, changeset} -> Repo.rollback(changeset)
+        end
+      end)
     end)
   end
 
@@ -429,19 +436,23 @@ defmodule ModuleOMat.Inventory do
   Legt ein neues Eurorack-Modul mit den gegebenen Attributen an.
   """
   def create_eurorack_module(attrs \\ %{}) do
-    %EurorackModule{youtube_videos: []}
-    |> EurorackModule.changeset(attrs)
-    |> Repo.insert()
+    with_write(fn ->
+      %EurorackModule{youtube_videos: []}
+      |> EurorackModule.changeset(attrs)
+      |> Repo.insert()
+    end)
   end
 
   @doc """
   Aktualisiert ein bestehendes Eurorack-Modul mit den gegebenen Attributen.
   """
   def update_eurorack_module(%EurorackModule{} = eurorack_module, attrs) do
-    eurorack_module
-    |> ensure_youtube_videos_loaded()
-    |> EurorackModule.changeset(attrs)
-    |> Repo.update()
+    with_write(fn ->
+      eurorack_module
+      |> ensure_youtube_videos_loaded()
+      |> EurorackModule.changeset(attrs)
+      |> Repo.update()
+    end)
   end
 
   @doc """
@@ -449,14 +460,16 @@ defmodule ModuleOMat.Inventory do
   eine ggf. vorhandene PDF-Anleitung vom Storage.
   """
   def delete_eurorack_module(%EurorackModule{} = eurorack_module) do
-    case Repo.delete(eurorack_module) do
-      {:ok, deleted} ->
-        ManualStorage.delete(deleted.manual_pdf_key)
-        {:ok, deleted}
+    with_write(fn ->
+      case Repo.delete(eurorack_module) do
+        {:ok, deleted} ->
+          ManualStorage.delete(deleted.manual_pdf_key)
+          {:ok, deleted}
 
-      {:error, _} = error ->
-        error
-    end
+        {:error, _} = error ->
+          error
+      end
+    end)
   end
 
   @doc """
@@ -466,9 +479,11 @@ defmodule ModuleOMat.Inventory do
   bleibt erhalten.
   """
   def soft_delete_eurorack_module(%EurorackModule{} = eurorack_module) do
-    eurorack_module
-    |> Ecto.Changeset.change(deleted_at: DateTime.utc_now(:second))
-    |> Repo.update()
+    with_write(fn ->
+      eurorack_module
+      |> Ecto.Changeset.change(deleted_at: DateTime.utc_now(:second))
+      |> Repo.update()
+    end)
   end
 
   @doc """
@@ -483,50 +498,54 @@ defmodule ModuleOMat.Inventory do
         size: size
       })
       when is_binary(tmp_path) and is_binary(filename) do
-    new_key = ManualStorage.new_key()
-    old_key = eurorack_module.manual_pdf_key
+    with_write(fn ->
+      new_key = ManualStorage.new_key()
+      old_key = eurorack_module.manual_pdf_key
 
-    ManualStorage.store!(new_key, tmp_path)
+      ManualStorage.store!(new_key, tmp_path)
 
-    attrs = %{
-      manual_pdf_key: new_key,
-      manual_pdf_filename: filename,
-      manual_pdf_content_type: content_type || "application/pdf",
-      manual_pdf_size_bytes: size
-    }
+      attrs = %{
+        manual_pdf_key: new_key,
+        manual_pdf_filename: filename,
+        manual_pdf_content_type: content_type || "application/pdf",
+        manual_pdf_size_bytes: size
+      }
 
-    case eurorack_module |> EurorackModule.manual_changeset(attrs) |> Repo.update() do
-      {:ok, updated} ->
-        if old_key && old_key != new_key, do: ManualStorage.delete(old_key)
-        {:ok, updated}
+      case eurorack_module |> EurorackModule.manual_changeset(attrs) |> Repo.update() do
+        {:ok, updated} ->
+          if old_key && old_key != new_key, do: ManualStorage.delete(old_key)
+          {:ok, updated}
 
-      {:error, changeset} ->
-        ManualStorage.delete(new_key)
-        {:error, changeset}
-    end
+        {:error, changeset} ->
+          ManualStorage.delete(new_key)
+          {:error, changeset}
+      end
+    end)
   end
 
   @doc """
   Entfernt die PDF-Anleitung eines Moduls aus der Datenbank und vom Storage.
   """
   def remove_manual(%EurorackModule{} = eurorack_module) do
-    key = eurorack_module.manual_pdf_key
+    with_write(fn ->
+      key = eurorack_module.manual_pdf_key
 
-    attrs = %{
-      manual_pdf_key: nil,
-      manual_pdf_filename: nil,
-      manual_pdf_content_type: nil,
-      manual_pdf_size_bytes: nil
-    }
+      attrs = %{
+        manual_pdf_key: nil,
+        manual_pdf_filename: nil,
+        manual_pdf_content_type: nil,
+        manual_pdf_size_bytes: nil
+      }
 
-    case eurorack_module |> EurorackModule.manual_changeset(attrs) |> Repo.update() do
-      {:ok, updated} ->
-        ManualStorage.delete(key)
-        {:ok, updated}
+      case eurorack_module |> EurorackModule.manual_changeset(attrs) |> Repo.update() do
+        {:ok, updated} ->
+          ManualStorage.delete(key)
+          {:ok, updated}
 
-      {:error, _} = error ->
-        error
-    end
+        {:error, _} = error ->
+          error
+      end
+    end)
   end
 
   @doc """
@@ -571,40 +590,42 @@ defmodule ModuleOMat.Inventory do
   """
   def copy_manual(%EurorackModule{} = target, source_key, meta \\ %{})
       when is_binary(source_key) and is_map(meta) do
-    new_key = ManualStorage.new_key()
-    tmp_path = Path.join(System.tmp_dir!(), "module-o-mat-manual-copy-#{new_key}.pdf")
+    with_write(fn ->
+      new_key = ManualStorage.new_key()
+      tmp_path = Path.join(System.tmp_dir!(), "module-o-mat-manual-copy-#{new_key}.pdf")
 
-    try do
-      ManualStorage.copy_out!(source_key, tmp_path)
-      ManualStorage.store!(new_key, tmp_path)
+      try do
+        ManualStorage.copy_out!(source_key, tmp_path)
+        ManualStorage.store!(new_key, tmp_path)
 
-      attrs = %{
-        manual_pdf_key: new_key,
-        manual_pdf_filename:
-          Map.get(meta, :filename) || Map.get(meta, "filename") || target.manual_pdf_filename,
-        manual_pdf_content_type:
-          Map.get(meta, :content_type) || Map.get(meta, "content_type") ||
-            target.manual_pdf_content_type || "application/pdf",
-        manual_pdf_size_bytes:
-          Map.get(meta, :size_bytes) || Map.get(meta, "size_bytes") ||
-            target.manual_pdf_size_bytes
-      }
+        attrs = %{
+          manual_pdf_key: new_key,
+          manual_pdf_filename:
+            Map.get(meta, :filename) || Map.get(meta, "filename") || target.manual_pdf_filename,
+          manual_pdf_content_type:
+            Map.get(meta, :content_type) || Map.get(meta, "content_type") ||
+              target.manual_pdf_content_type || "application/pdf",
+          manual_pdf_size_bytes:
+            Map.get(meta, :size_bytes) || Map.get(meta, "size_bytes") ||
+              target.manual_pdf_size_bytes
+        }
 
-      case target |> EurorackModule.manual_changeset(attrs) |> Repo.update() do
-        {:ok, updated} ->
-          {:ok, updated}
+        case target |> EurorackModule.manual_changeset(attrs) |> Repo.update() do
+          {:ok, updated} ->
+            {:ok, updated}
 
-        {:error, changeset} ->
+          {:error, changeset} ->
+            ManualStorage.delete(new_key)
+            {:error, changeset}
+        end
+      rescue
+        error in [File.Error, ArgumentError] ->
           ManualStorage.delete(new_key)
-          {:error, changeset}
+          {:error, error}
+      after
+        _ = File.rm(tmp_path)
       end
-    rescue
-      error in [File.Error, ArgumentError] ->
-        ManualStorage.delete(new_key)
-        {:error, error}
-    after
-      _ = File.rm(tmp_path)
-    end
+    end)
   end
 
   @doc """
@@ -656,51 +677,53 @@ defmodule ModuleOMat.Inventory do
   """
   def create_price_observations(%EurorackModule{} = eurorack_module, observations, opts \\ [])
       when is_list(observations) do
-    if observations == [] do
-      {:error, :empty_observations}
-    else
-      set_current_value = Keyword.get(opts, :set_current_value, :median)
+    with_write(fn ->
+      if observations == [] do
+        {:error, :empty_observations}
+      else
+        set_current_value = Keyword.get(opts, :set_current_value, :median)
 
-      Repo.transaction(fn ->
-        inserted =
-          Enum.map(observations, fn attrs ->
-            attrs = observation_attrs(attrs, eurorack_module.id)
+        Repo.transaction(fn ->
+          inserted =
+            Enum.map(observations, fn attrs ->
+              attrs = observation_attrs(attrs, eurorack_module.id)
 
-            case %ModulePriceObservation{}
-                 |> ModulePriceObservation.changeset(attrs)
-                 |> Repo.insert() do
-              {:ok, observation} ->
-                observation
+              case %ModulePriceObservation{}
+                   |> ModulePriceObservation.changeset(attrs)
+                   |> Repo.insert() do
+                {:ok, observation} ->
+                  observation
 
-              {:error, changeset} ->
-                Repo.rollback(changeset)
-            end
-          end)
-
-        eurorack_module =
-          case resolve_current_value(set_current_value, inserted) do
-            :unchanged ->
-              eurorack_module
-
-            {:ok, value} ->
-              case eurorack_module
-                   |> Ecto.Changeset.change(current_value: value)
-                   |> Repo.update() do
-                {:ok, updated} -> updated
-                {:error, changeset} -> Repo.rollback(changeset)
+                {:error, changeset} ->
+                  Repo.rollback(changeset)
               end
+            end)
 
-            {:error, reason} ->
-              Repo.rollback(reason)
-          end
+          eurorack_module =
+            case resolve_current_value(set_current_value, inserted) do
+              :unchanged ->
+                eurorack_module
 
-        %{
-          module: eurorack_module,
-          observations: inserted,
-          price_range: price_range_for_module(eurorack_module.id)
-        }
-      end)
-    end
+              {:ok, value} ->
+                case eurorack_module
+                     |> Ecto.Changeset.change(current_value: value)
+                     |> Repo.update() do
+                  {:ok, updated} -> updated
+                  {:error, changeset} -> Repo.rollback(changeset)
+                end
+
+              {:error, reason} ->
+                Repo.rollback(reason)
+            end
+
+          %{
+            module: eurorack_module,
+            observations: inserted,
+            price_range: price_range_for_module(eurorack_module.id)
+          }
+        end)
+      end
+    end)
   end
 
   @doc """
@@ -838,8 +861,36 @@ defmodule ModuleOMat.Inventory do
   den gesamten Bestand.
   """
   def import_backup(path) when is_binary(path) do
-    ModuleOMat.Inventory.Backup.import_from_path(path)
+    with_write(fn ->
+      ModuleOMat.Inventory.Backup.import_from_path(path)
+    end)
   end
+
+  defp with_write(fun) when is_function(fun, 0) do
+    case RemoteBackupScheduler.begin_write() do
+      :ok ->
+        try do
+          after_change(fun.())
+        after
+          RemoteBackupScheduler.end_write()
+        end
+
+      {:error, :maintenance} = error ->
+        error
+    end
+  end
+
+  defp after_change(:ok = result) do
+    RemoteBackupScheduler.schedule_after_change()
+    result
+  end
+
+  defp after_change({:ok, _} = result) do
+    RemoteBackupScheduler.schedule_after_change()
+    result
+  end
+
+  defp after_change(other), do: other
 
   defp ensure_youtube_videos_loaded(
          %EurorackModule{youtube_videos: %Ecto.Association.NotLoaded{}} = eurorack_module

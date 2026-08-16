@@ -69,6 +69,7 @@ defmodule ModuleOMat.Inventory.RemoteBackupSchedulerTest do
 
     _ = :sys.get_state(pid)
     assert_receive :backup_ran, 1_000
+    assert :ok = RemoteBackupScheduler.await_idle()
     assert File.read!(stamp_path) |> String.trim() == "2026-08-16"
   end
 
@@ -106,6 +107,7 @@ defmodule ModuleOMat.Inventory.RemoteBackupSchedulerTest do
 
     _ = :sys.get_state(pid)
     assert_receive :backup_ran, 1_000
+    assert :ok = RemoteBackupScheduler.await_idle()
 
     send(pid, :tick)
     _ = :sys.get_state(pid)
@@ -129,6 +131,7 @@ defmodule ModuleOMat.Inventory.RemoteBackupSchedulerTest do
     assert {:ok, pid} = start_supervised({RemoteBackupScheduler, opts})
     _ = :sys.get_state(pid)
     assert_receive :backup_ran, 1_000
+    assert :ok = RemoteBackupScheduler.await_idle()
 
     Agent.update(now_agent, fn _ -> ~U[2026-08-17 10:00:00Z] end)
     send(pid, :tick)
@@ -153,6 +156,7 @@ defmodule ModuleOMat.Inventory.RemoteBackupSchedulerTest do
 
     _ = :sys.get_state(pid)
     assert_receive :about_to_raise, 1_000
+    assert :ok = RemoteBackupScheduler.await_idle()
     assert %{at: {3, 0}} = :sys.get_state(pid)
   end
 
@@ -175,6 +179,82 @@ defmodule ModuleOMat.Inventory.RemoteBackupSchedulerTest do
     refute_receive :backup_ran, 150
   end
 
+  test "plant nach Aenderung ein Backup und debounce't weitere Aufrufe", %{stamp_path: stamp_path} do
+    File.write!(stamp_path, "2026-08-16\n")
+    test_pid = self()
+
+    run_fun = fn ->
+      send(test_pid, :backup_ran)
+      {:ok, "inventory-sun.zip"}
+    end
+
+    opts =
+      stamp_path
+      |> scheduler_opts(run_fun, ~U[2026-08-16 10:00:00Z])
+      |> Keyword.merge(idle_after_ms: 80, maintenance_grace_ms: 0)
+
+    assert {:ok, pid} = start_supervised({RemoteBackupScheduler, opts})
+    _ = :sys.get_state(pid)
+
+    RemoteBackupScheduler.schedule_after_change()
+    _ = :sys.get_state(pid)
+    RemoteBackupScheduler.schedule_after_change()
+    _ = :sys.get_state(pid)
+    refute_receive :backup_ran, 40
+    assert_receive :backup_ran, 500
+    assert :ok = RemoteBackupScheduler.await_idle()
+    refute RemoteBackupScheduler.maintenance?()
+    assert File.read!(stamp_path) |> String.trim() == "2026-08-16"
+  end
+
+  test "begin_write ist waehrend des Backups gesperrt", %{stamp_path: stamp_path} do
+    File.write!(stamp_path, "2026-08-16\n")
+    test_pid = self()
+
+    run_fun = fn ->
+      send(test_pid, {:started, self()})
+
+      receive do
+        :go -> {:ok, "inventory-sun.zip"}
+      end
+    end
+
+    opts =
+      stamp_path
+      |> scheduler_opts(run_fun, ~U[2026-08-16 10:00:00Z])
+      |> Keyword.merge(idle_after_ms: 20, timeout_ms: 2_000)
+
+    assert {:ok, _pid} = start_supervised({RemoteBackupScheduler, opts})
+    RemoteBackupScheduler.schedule_after_change()
+    assert_receive {:started, run_pid}, 1_000
+    assert RemoteBackupScheduler.maintenance?()
+    assert {:error, :maintenance} = RemoteBackupScheduler.begin_write()
+    send(run_pid, :go)
+    assert :ok = RemoteBackupScheduler.await_idle()
+    refute RemoteBackupScheduler.maintenance?()
+  end
+
+  test "Idle-Backup laesst den taeglichen Stamp unangetastet", %{stamp_path: stamp_path} do
+    test_pid = self()
+
+    run_fun = fn ->
+      send(test_pid, :backup_ran)
+      {:ok, "inventory-sun.zip"}
+    end
+
+    opts =
+      stamp_path
+      |> scheduler_opts(run_fun, ~U[2026-08-16 00:00:00Z])
+      |> Keyword.merge(idle_after_ms: 20)
+
+    assert {:ok, pid} = start_supervised({RemoteBackupScheduler, opts})
+    _ = :sys.get_state(pid)
+    RemoteBackupScheduler.schedule_after_change()
+    assert_receive :backup_ran, 1_000
+    assert :ok = RemoteBackupScheduler.await_idle()
+    refute File.exists?(stamp_path)
+  end
+
   defp scheduler_opts(stamp_path, run_fun, utc_now) do
     utc_now_fun =
       case utc_now do
@@ -194,7 +274,9 @@ defmodule ModuleOMat.Inventory.RemoteBackupSchedulerTest do
       stamp_path: stamp_path,
       tick_ms: 60_000,
       retry_after_ms: 0,
-      timeout_ms: 1_000
+      timeout_ms: 1_000,
+      idle_after_ms: 60_000,
+      maintenance_grace_ms: 0
     ]
   end
 end

@@ -70,6 +70,11 @@ defmodule ModuleOMatWeb.Api.ModuleController do
         |> put_status(:unprocessable_entity)
         |> json(%{error: "current_value ist ungueltig"})
 
+      {:error, :maintenance} ->
+        conn
+        |> put_status(:service_unavailable)
+        |> json(%{error: "Datensicherung laeuft. Bitte warte einen Moment."})
+
       {:error, %Ecto.Changeset{} = changeset} ->
         conn
         |> put_status(:unprocessable_entity)

@@ -10,12 +10,14 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
   alias ModuleOMat.Inventory
   alias ModuleOMat.Inventory.EurorackModule
   alias ModuleOMat.Inventory.ModuleType
+  alias ModuleOMat.Inventory.RemoteBackupScheduler
   alias ModuleOMat.Inventory.Youtube
 
   @impl true
   def mount(_params, _session, socket) do
     {:ok,
      socket
+     |> assign_maintenance()
      |> assign_filters(%{})
      |> reload_eurorack_modules()
      |> assign(:manufacturers, Inventory.list_manufacturers())
@@ -43,6 +45,11 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
   @impl true
   def handle_params(params, _url, socket) do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
+  end
+
+  @impl true
+  def handle_info({:maintenance, active?}, socket) do
+    {:noreply, assign(socket, :maintenance?, active?)}
   end
 
   defp apply_action(socket, :new, _params) do
@@ -208,6 +215,9 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
          |> assign(:module_type_form, to_form(Inventory.change_module_type(%ModuleType{})))
          |> put_flash(:info, "Typ \"#{module_type.name}\" wurde hinzugefuegt.")}
 
+      {:error, :maintenance} ->
+        maintenance_reply(socket)
+
       {:error, changeset} ->
         {:noreply, assign(socket, :module_type_form, to_form(changeset))}
     end
@@ -249,6 +259,9 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
          |> assign(:module_type_edit_form, nil)
          |> put_flash(:info, "Typ \"#{module_type.name}\" wurde aktualisiert.")}
 
+      {:error, :maintenance} ->
+        maintenance_reply(socket)
+
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, :module_type_edit_form, to_form(changeset))}
 
@@ -274,6 +287,9 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
          |> reload_eurorack_modules()
          |> refresh_module_types()
          |> put_flash(:info, "Typ \"#{deleted.name}\" wurde geloescht.")}
+
+      {:error, :maintenance} ->
+        maintenance_reply(socket)
 
       {:error, :fallback_type} ->
         {:noreply,
@@ -303,6 +319,9 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
          |> reload_eurorack_modules()
          |> assign(:module_to_delete, nil)
          |> put_flash(:info, "Modul \"#{eurorack_module.name}\" wurde geloescht.")}
+
+      {:error, :maintenance} ->
+        maintenance_reply(socket)
 
       {:error, _changeset} ->
         {:noreply,
@@ -343,6 +362,9 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
          |> put_flash(:info, "Backup wurde importiert. Alle bisherigen Daten wurden ersetzt.")
          |> push_patch(to: ~p"/live")}
 
+      [{:error, :maintenance}] ->
+        maintenance_reply(socket)
+
       [{:error, reason}] ->
         {:noreply, put_flash(socket, :error, "Import fehlgeschlagen: #{reason}")}
 
@@ -377,6 +399,9 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
              |> assign(:form, to_form(Inventory.change_eurorack_module(updated)))
              |> reload_eurorack_modules()
              |> put_flash(:info, "PDF-Anleitung wurde entfernt.")}
+
+          {:error, :maintenance} ->
+            maintenance_reply(socket)
 
           {:error, _changeset} ->
             {:noreply, put_flash(socket, :error, "PDF-Anleitung konnte nicht entfernt werden.")}
@@ -420,6 +445,9 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
             {:noreply, after_module_saved(socket, eurorack_module, :manual_upload_error)}
         end
 
+      {:error, :maintenance} ->
+        maintenance_reply(socket)
+
       {:error, changeset} ->
         {:noreply, assign(socket, :form, to_form(changeset))}
     end
@@ -442,6 +470,9 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
             {:noreply, after_module_saved(socket, eurorack_module, :manual_upload_error)}
         end
 
+      {:error, :maintenance} ->
+        maintenance_reply(socket)
+
       {:error, changeset} ->
         {:noreply, assign(socket, :form, to_form(changeset))}
     end
@@ -457,6 +488,9 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
           {:error, :manual_upload} ->
             {:noreply, after_module_saved(socket, eurorack_module, :manual_update_error)}
         end
+
+      {:error, :maintenance} ->
+        maintenance_reply(socket)
 
       {:error, changeset} ->
         {:noreply, assign(socket, :form, to_form(changeset))}
@@ -653,6 +687,20 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
     |> then(fn formatted ->
       if String.starts_with?(int_str, "-"), do: "-" <> formatted, else: formatted
     end)
+  end
+
+  defp assign_maintenance(socket) do
+    if connected?(socket), do: RemoteBackupScheduler.subscribe()
+    assign(socket, :maintenance?, RemoteBackupScheduler.maintenance?())
+  end
+
+  defp maintenance_reply(socket) do
+    {:noreply,
+     put_flash(
+       socket,
+       :error,
+       "Datensicherung laeuft. Aenderungen sind gerade gesperrt."
+     )}
   end
 
   defp reload_eurorack_modules(socket) do

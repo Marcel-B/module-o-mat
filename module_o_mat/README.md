@@ -85,6 +85,7 @@ Keine Authentifizierung (LAN-Homelab). LiveView bleibt parallel bestehen.
 - `GET /api/v1/manufacturers` — Autocomplete
 - `GET /api/v1/backup/export` — ZIP-Download
 - `POST /api/v1/backup/import` — ZIP-Upload, ersetzt den Bestand
+- `GET /api/v1/maintenance` — `{"maintenance": true}` während eines Backups
 
 ### `/api/modules` (Bewertungs-Agent)
 
@@ -278,9 +279,18 @@ NEXTCLOUD_USERNAME=USER
 NEXTCLOUD_APP_PASSWORD=xxxx-xxxx-xxxx-xxxx
 NEXTCLOUD_BACKUP_AT=03:00
 NEXTCLOUD_BACKUP_TIMEZONE=Europe/Berlin
+NEXTCLOUD_BACKUP_IDLE_MINUTES=10
+NEXTCLOUD_BACKUP_HTTP_TIMEOUT_SECONDS=300
 ```
 
 4. Stack neu starten: `docker compose up -d`
+
+Nach einer Inventar-Änderung wartet die App 10 Minuten (konfigurierbar) und
+lädt dann dieselbe Wochentags-Datei erneut hoch. Solange das Backup läuft,
+ist die Oberfläche im Wartungsmodus – Schreibzugriffe sind gesperrt.
+Der WebDAV-Upload hat 5 Minuten HTTP-Timeout (Req-Default wären 15 Sekunden)
+und wiederholt kurze Netzfehler; bei sehr großen ZIP-Dateien
+`NEXTCLOUD_BACKUP_HTTP_TIMEOUT_SECONDS` erhöhen.
 
 Nach einem Neustart (Deploy, Reboot) holt der Scheduler einen versäumten
 heutigen Lauf nach, sobald die Sollzeit vorbei ist. Sofortiger Upload:

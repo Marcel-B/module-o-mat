@@ -54,6 +54,28 @@ defmodule ModuleOMat.Inventory.WebDAVTest do
     assert reason =~ "401"
   end
 
+  test "put_file beschreibt HTTP-Timeouts verstaendlich", %{tmp: tmp} do
+    Req.Test.stub(ModuleOMat.Inventory.WebDAV, fn conn ->
+      Req.Test.transport_error(conn, :timeout)
+    end)
+
+    assert {:error, reason} =
+             WebDAV.put_file(
+               "http://nextcloud.test/dav",
+               "inventory-mon.zip",
+               tmp,
+               username: "user",
+               password: "app-pass",
+               receive_timeout: 1_000,
+               req_options: [
+                 plug: {Req.Test, ModuleOMat.Inventory.WebDAV},
+                 retry: false
+               ]
+             )
+
+    assert reason =~ "HTTP-Timeout nach 1s"
+  end
+
   test "ensure_collection akzeptiert vorhandene Ordner" do
     Req.Test.stub(ModuleOMat.Inventory.WebDAV, fn conn ->
       assert conn.method == "MKCOL"

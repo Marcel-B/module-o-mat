@@ -12,6 +12,17 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
       assert html =~ "Es sind noch keine Module erfasst."
     end
 
+    test "zeigt das Wartungs-Overlay wenn ein Backup laeuft", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/live")
+      refute has_element?(view, "#maintenance-overlay")
+
+      send(view.pid, {:maintenance, true})
+      assert has_element?(view, "#maintenance-overlay")
+
+      send(view.pid, {:maintenance, false})
+      refute has_element?(view, "#maintenance-overlay")
+    end
+
     test "zeigt erfasste Module gruppiert nach Typ und sortiert nach Hersteller an", %{
       conn: conn
     } do

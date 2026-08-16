@@ -19,5 +19,17 @@ defmodule ModuleOMatWeb.HomeLiveTest do
       assert has_element?(view, "#ui-choice-vue[href='/ui']")
       assert has_element?(view, "#ui-choice-vue-alt[href='/ui-alt']")
     end
+
+    test "zeigt das Wartungs-Overlay wenn ein Backup laeuft", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/")
+      refute has_element?(view, "#maintenance-overlay")
+
+      send(view.pid, {:maintenance, true})
+      assert has_element?(view, "#maintenance-overlay")
+      assert render(view) =~ "Datensicherung läuft"
+
+      send(view.pid, {:maintenance, false})
+      refute has_element?(view, "#maintenance-overlay")
+    end
   end
 end

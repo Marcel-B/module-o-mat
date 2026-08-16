@@ -59,6 +59,7 @@ defmodule ModuleOMat.Inventory.RemoteBackup do
       try do
         with :ok <- maybe_ensure_collection(config, webdav_opts),
              {:ok, ^tmp_path} <- Inventory.export_backup(tmp_path),
+             :ok <- log_upload(filename, tmp_path),
              :ok <- WebDAV.put_file(config.base_url, filename, tmp_path, webdav_opts) do
           Logger.info("Nextcloud-Backup hochgeladen: #{filename}")
           {:ok, filename}
@@ -100,10 +101,17 @@ defmodule ModuleOMat.Inventory.RemoteBackup do
     end
   end
 
+  defp log_upload(filename, tmp_path) do
+    size = File.stat!(tmp_path).size
+    Logger.info("Nextcloud-Backup Upload startet: #{filename} (#{size} Bytes)")
+    :ok
+  end
+
   defp webdav_opts(config) do
     [
       username: config.username,
       password: config.password,
+      receive_timeout: config.receive_timeout,
       req_options: config.req_options
     ]
   end
@@ -116,6 +124,7 @@ defmodule ModuleOMat.Inventory.RemoteBackup do
     |> Map.put_new(:timezone, "Europe/Berlin")
     |> Map.put_new(:ensure_collection, true)
     |> Map.put_new(:req_options, [])
+    |> Map.put_new(:receive_timeout, :timer.minutes(5))
     |> Map.put_new(:base_url, nil)
     |> Map.put_new(:username, nil)
     |> Map.put_new(:password, nil)

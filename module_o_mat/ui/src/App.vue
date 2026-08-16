@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import AppHeader from './components/AppHeader.vue'
+import MaintenanceOverlay from './components/MaintenanceOverlay.vue'
 </script>
 
 <template>
@@ -10,5 +11,6 @@ import AppHeader from './components/AppHeader.vue'
     </main>
     <Toast position="top-right" />
     <ConfirmDialog />
+    <MaintenanceOverlay />
   </div>
 </template>
