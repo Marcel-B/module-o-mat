@@ -3,6 +3,17 @@ defmodule ModuleOMat.Inventory.RemoteBackupSchedulerTest do
 
   alias ModuleOMat.Inventory.RemoteBackupScheduler
 
+  setup do
+    stamp_path =
+      Path.join(
+        System.tmp_dir!(),
+        "remote_backup_stamp_#{System.unique_integer([:positive])}"
+      )
+
+    on_exit(fn -> File.rm(stamp_path) end)
+    %{stamp_path: stamp_path}
+  end
+
   test "enabled? erfordert Flag und Credentials" do
     refute RemoteBackupScheduler.enabled?([])
     refute RemoteBackupScheduler.enabled?(enabled: true, base_url: "https://x", username: "u")
@@ -42,33 +53,90 @@ defmodule ModuleOMat.Inventory.RemoteBackupSchedulerTest do
              )
   end
 
-  test "Scheduler fuehrt run_fun aus und plant erneut" do
+  test "holt den Lauf nach wenn der Start nach der Sollzeit liegt", %{stamp_path: stamp_path} do
     test_pid = self()
 
     run_fun = fn ->
       send(test_pid, :backup_ran)
-      {:ok, "inventory-mon.zip"}
+      {:ok, "inventory-sun.zip"}
     end
 
     assert {:ok, pid} =
              start_supervised(
                {RemoteBackupScheduler,
-                [
-                  enabled: true,
-                  base_url: "https://example.test/dav",
-                  username: "u",
-                  password: "p",
-                  at: {3, 0},
-                  timezone: "Europe/Berlin",
-                  run_fun: run_fun
-                ]}
+                scheduler_opts(stamp_path, run_fun, ~U[2026-08-16 10:00:00Z])}
              )
 
-    send(pid, :run_backup)
+    _ = :sys.get_state(pid)
+    assert_receive :backup_ran, 1_000
+    assert File.read!(stamp_path) |> String.trim() == "2026-08-16"
+  end
+
+  test "laeuft nicht vor der Sollzeit", %{stamp_path: stamp_path} do
+    test_pid = self()
+
+    run_fun = fn ->
+      send(test_pid, :backup_ran)
+      {:ok, "inventory-sun.zip"}
+    end
+
+    assert {:ok, pid} =
+             start_supervised(
+               {RemoteBackupScheduler,
+                scheduler_opts(stamp_path, run_fun, ~U[2026-08-16 00:00:00Z])}
+             )
+
+    _ = :sys.get_state(pid)
+    refute_receive :backup_ran, 150
+  end
+
+  test "laeuft denselben lokalen Tag nicht zweimal", %{stamp_path: stamp_path} do
+    test_pid = self()
+
+    run_fun = fn ->
+      send(test_pid, :backup_ran)
+      {:ok, "inventory-sun.zip"}
+    end
+
+    assert {:ok, pid} =
+             start_supervised(
+               {RemoteBackupScheduler,
+                scheduler_opts(stamp_path, run_fun, ~U[2026-08-16 10:00:00Z])}
+             )
+
+    _ = :sys.get_state(pid)
+    assert_receive :backup_ran, 1_000
+
+    send(pid, :tick)
+    _ = :sys.get_state(pid)
+    refute_receive :backup_ran, 150
+  end
+
+  test "laeuft am naechsten Tag erneut", %{stamp_path: stamp_path} do
+    test_pid = self()
+    {:ok, now_agent} = Agent.start_link(fn -> ~U[2026-08-16 10:00:00Z] end)
+
+    run_fun = fn ->
+      send(test_pid, :backup_ran)
+      {:ok, "ok"}
+    end
+
+    opts =
+      stamp_path
+      |> scheduler_opts(run_fun, fn -> Agent.get(now_agent, & &1) end)
+      |> Keyword.put(:tick_ms, 60_000)
+
+    assert {:ok, pid} = start_supervised({RemoteBackupScheduler, opts})
+    _ = :sys.get_state(pid)
+    assert_receive :backup_ran, 1_000
+
+    Agent.update(now_agent, fn _ -> ~U[2026-08-17 10:00:00Z] end)
+    send(pid, :tick)
+    _ = :sys.get_state(pid)
     assert_receive :backup_ran, 1_000
   end
 
-  test "Scheduler bleibt bei Exception im Job am Leben" do
+  test "Scheduler bleibt bei Exception im Job am Leben", %{stamp_path: stamp_path} do
     test_pid = self()
 
     run_fun = fn ->
@@ -76,22 +144,57 @@ defmodule ModuleOMat.Inventory.RemoteBackupSchedulerTest do
       raise "boom"
     end
 
+    opts =
+      stamp_path
+      |> scheduler_opts(run_fun, ~U[2026-08-16 10:00:00Z])
+      |> Keyword.put(:retry_after_ms, 60_000)
+
+    assert {:ok, pid} = start_supervised({RemoteBackupScheduler, opts})
+
+    _ = :sys.get_state(pid)
+    assert_receive :about_to_raise, 1_000
+    assert %{at: {3, 0}} = :sys.get_state(pid)
+  end
+
+  test "ueberspringt Catch-up wenn der Stamp von heute schon existiert", %{stamp_path: stamp_path} do
+    File.write!(stamp_path, "2026-08-16\n")
+    test_pid = self()
+
+    run_fun = fn ->
+      send(test_pid, :backup_ran)
+      {:ok, "inventory-sun.zip"}
+    end
+
     assert {:ok, pid} =
              start_supervised(
                {RemoteBackupScheduler,
-                [
-                  enabled: true,
-                  base_url: "https://example.test/dav",
-                  username: "u",
-                  password: "p",
-                  at: {3, 0},
-                  timezone: "Europe/Berlin",
-                  run_fun: run_fun
-                ]}
+                scheduler_opts(stamp_path, run_fun, ~U[2026-08-16 10:00:00Z])}
              )
 
-    send(pid, :run_backup)
-    assert_receive :about_to_raise, 1_000
-    assert %{at: {3, 0}} = :sys.get_state(pid)
+    _ = :sys.get_state(pid)
+    refute_receive :backup_ran, 150
+  end
+
+  defp scheduler_opts(stamp_path, run_fun, utc_now) do
+    utc_now_fun =
+      case utc_now do
+        %DateTime{} = datetime -> fn -> datetime end
+        fun when is_function(fun, 0) -> fun
+      end
+
+    [
+      enabled: true,
+      base_url: "https://example.test/dav",
+      username: "u",
+      password: "p",
+      at: {3, 0},
+      timezone: "Europe/Berlin",
+      run_fun: run_fun,
+      utc_now: utc_now_fun,
+      stamp_path: stamp_path,
+      tick_ms: 60_000,
+      retry_after_ms: 0,
+      timeout_ms: 1_000
+    ]
   end
 end

@@ -12,6 +12,7 @@ defmodule ModuleOMat.Application do
       ModuleOMat.Repo,
       {DNSCluster, query: Application.get_env(:module_o_mat, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: ModuleOMat.PubSub},
+      {Task.Supervisor, name: ModuleOMat.TaskSupervisor},
       ModuleOMat.Inventory.RemoteBackupScheduler,
       ModuleOMatWeb.Endpoint
     ]

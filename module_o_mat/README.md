@@ -282,6 +282,15 @@ NEXTCLOUD_BACKUP_TIMEZONE=Europe/Berlin
 
 4. Stack neu starten: `docker compose up -d`
 
+Nach einem Neustart (Deploy, Reboot) holt der Scheduler einen versäumten
+heutigen Lauf nach, sobald die Sollzeit vorbei ist. Sofortiger Upload:
+
+```bash
+docker compose exec web bin/module_o_mat eval 'ModuleOMat.Inventory.RemoteBackup.run()'
+# oder lokal:
+mix inventory.remote_backup
+```
+
 Wiederherstellen: ZIP aus Nextcloud laden und über die UI unter `/backup` oder
 mit `mix inventory.import path/to/inventory-mon.zip` importieren (ersetzt alle
 Inventardaten).
