@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
+import { FilterMatchMode, FilterOperator } from "@primevue/core/api";
 import { formatEuro, formatEuroRange, formatHpWidth } from "../utils/format";
 import { youtubeEmbedUrl, youtubeWatchUrl } from "../utils/youtube";
 import type { InventoryStats, Module, ModuleGroup } from "../types";
@@ -28,14 +29,26 @@ type TableFilters = {
   global: { value: string | null; matchMode: string };
   type: { value: string | null; matchMode: string };
   manufacturer: { value: string | null; matchMode: string };
-  hp: { value: number | null; matchMode: string };
+  hp: {
+    operator: string;
+    constraints: [
+      { value: number | null; matchMode: string },
+      { value: number | null; matchMode: string },
+    ];
+  };
 };
 
 const filters = ref<TableFilters>({
-  global: { value: null, matchMode: "contains" },
-  type: { value: null, matchMode: "equals" },
-  manufacturer: { value: null, matchMode: "equals" },
-  hp: { value: null, matchMode: "equals" },
+  global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  type: { value: null, matchMode: FilterMatchMode.EQUALS },
+  manufacturer: { value: null, matchMode: FilterMatchMode.EQUALS },
+  hp: {
+    operator: FilterOperator.AND,
+    constraints: [
+      { value: null, matchMode: FilterMatchMode.GREATER_THAN_OR_EQUAL_TO },
+      { value: null, matchMode: FilterMatchMode.LESS_THAN_OR_EQUAL_TO },
+    ],
+  },
 });
 
 function filterHasValue(value: string | number | null): boolean {
@@ -44,15 +57,22 @@ function filterHasValue(value: string | number | null): boolean {
   return true;
 }
 
-const tableFiltersActive = computed(() =>
-  Object.values(filters.value).some((constraint) => filterHasValue(constraint.value)),
-);
+const tableFiltersActive = computed(() => {
+  const { global, type, manufacturer, hp } = filters.value;
+  return (
+    filterHasValue(global.value) ||
+    filterHasValue(type.value) ||
+    filterHasValue(manufacturer.value) ||
+    hp.constraints.some((constraint) => filterHasValue(constraint.value))
+  );
+});
 
 function clearTableFilters() {
   filters.value.global.value = null;
   filters.value.type.value = null;
   filters.value.manufacturer.value = null;
-  filters.value.hp.value = null;
+  filters.value.hp.constraints[0].value = null;
+  filters.value.hp.constraints[1].value = null;
 }
 
 // Menü-Items werden in `items` gehalten
@@ -153,21 +173,29 @@ const toggle = (event: Event, data: Module) => {
         </FloatLabel>
         <FloatLabel variant="on">
           <InputNumber
-            v-model="filters.hp.value"
+            id="module-min-hp"
+            v-model="filters.hp.constraints[0].value"
             size="small"
+            :min="1"
+            :use-grouping="false"
             input-class="w-20"
-            v-tooltip.top="'Filter nach min-HP'"
+            input-id="module-min-hp"
+            v-tooltip.top="'Mindest-HP'"
           />
           <label class="text-xs" for="module-min-hp">Min HP</label>
         </FloatLabel>
         <FloatLabel variant="on">
           <InputNumber
-            v-model="filters.hp.value"
+            id="module-max-hp"
+            v-model="filters.hp.constraints[1].value"
             size="small"
+            :min="1"
+            :use-grouping="false"
             input-class="w-20"
-            v-tooltip.top="'Filter nach max-HP'"
+            input-id="module-max-hp"
+            v-tooltip.top="'Maximale HP'"
           />
-          <label class="text-xs" for="module-purchase-price">Max HP</label>
+          <label class="text-xs" for="module-max-hp">Max HP</label>
         </FloatLabel>
         <Button
           v-if="tableFiltersActive"
