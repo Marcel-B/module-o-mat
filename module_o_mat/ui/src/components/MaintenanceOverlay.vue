@@ -53,13 +53,13 @@ onUnmounted(() => {
     <div
       v-if="active"
       id="maintenance-overlay"
-      class="fixed inset-0 z-[2000] flex items-center justify-center bg-overlay p-6 backdrop-blur-md"
+      class="fixed inset-0 z-2000 flex items-center justify-center bg-overlay p-6 backdrop-blur-md"
       role="alertdialog"
       aria-modal="true"
       aria-labelledby="maintenance-overlay-title"
     >
       <div
-        class="grid max-w-md justify-items-center gap-3.5 rounded-2xl border border-card-border bg-card px-8 py-9 text-center shadow-[0_24px_60px_rgb(15_18_24_/_28%)] dark:border-card-border-dark dark:bg-card-dark"
+        class="grid max-w-md justify-items-center gap-3.5 rounded-2xl border border-card-border bg-card px-8 py-9 text-center shadow-[0_24px_60px_rgb(15_18_24/28%)] dark:border-card-border-dark dark:bg-card-dark"
       >
         <ProgressSpinner stroke-width="4" style="width: 3rem; height: 3rem" />
         <h2 id="maintenance-overlay-title" class="m-0 text-xl font-semibold tracking-tight">

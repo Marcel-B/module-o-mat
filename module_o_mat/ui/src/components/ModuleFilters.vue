@@ -1,89 +1,101 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { storeToRefs } from 'pinia'
-import { useInventoryStore } from '../stores/inventory'
-import type { ModuleFilters } from '../types'
+import { computed } from "vue";
+import type { TableFilters } from "../utils/tableFilters";
 
-const store = useInventoryStore()
-const { filters, usedTypes } = storeToRefs(store)
+defineProps<{
+  types: string[];
+}>();
 
-const typeOptions = computed(() => [
-  { label: 'Alle Typen', value: '' },
-  ...usedTypes.value.map((type) => ({ label: type, value: type })),
-])
+const filters = defineModel<TableFilters>({ required: true });
 
-function update(field: keyof ModuleFilters, value: string | number | null | undefined) {
-  store.setFilters({ [field]: value ?? '' })
+function filterHasValue(value: string | number | null): boolean {
+  if (value == null) return false;
+  if (typeof value === "string") return value.trim() !== "";
+  return true;
+}
+
+const filtersActive = computed(() => {
+  const { global, type, manufacturer, hp } = filters.value;
+  return (
+    filterHasValue(global.value) ||
+    filterHasValue(type.value) ||
+    filterHasValue(manufacturer.value) ||
+    hp.constraints.some((constraint) => filterHasValue(constraint.value))
+  );
+});
+
+function clearFilters() {
+  filters.value.global.value = null;
+  filters.value.type.value = null;
+  filters.value.manufacturer.value = null;
+  filters.value.hp.constraints[0].value = null;
+  filters.value.hp.constraints[1].value = null;
 }
 </script>
 
 <template>
-  <form
-    id="module-filter-form"
-    class="mb-5 grid grid-cols-1 items-end gap-3 min-[781px]:grid-cols-[minmax(0,1fr)_12rem_5.5rem_5.5rem_auto]"
-    @submit.prevent
-  >
-    <div>
-      <label class="mb-1.5 block text-xs font-semibold text-surface-600" for="module-search-input">Suche</label>
+  <div id="module-filter-form" class="flex flex-wrap items-center gap-2">
+    <FloatLabel variant="on">
       <IconField>
-        <InputIcon class="pi pi-search" />
+        <InputIcon class="pi pi-search text-sm" />
         <InputText
           id="module-search-input"
-          :model-value="filters.q"
-          placeholder="Hersteller oder Modul suchen…"
-          fluid
-          @update:model-value="update('q', $event)"
+          v-model="filters.global.value"
+          size="small"
+          class="w-80"
+          v-tooltip.top="'Suche in allen Spalten'"
         />
       </IconField>
-    </div>
-
-    <div>
-      <label class="mb-1.5 block text-xs font-semibold text-surface-600" for="module-type-filter">Typ</label>
+      <label class="text-xs" for="module-search-input">Suche</label>
+    </FloatLabel>
+    <FloatLabel variant="on">
       <Select
         id="module-type-filter"
-        :model-value="filters.type"
-        :options="typeOptions"
-        option-label="label"
-        option-value="value"
-        fluid
-        @update:model-value="update('type', $event)"
+        v-model="filters.type.value"
+        :options="types"
+        show-clear
+        size="small"
+        class="w-64"
+        v-tooltip.top="'Filter nach Typ'"
       />
-    </div>
-
-    <div>
-      <label class="mb-1.5 block text-xs font-semibold text-surface-600" for="module-min-hp">Min HP</label>
+      <label class="text-xs" for="module-type-filter">Typ</label>
+    </FloatLabel>
+    <FloatLabel variant="on">
       <InputNumber
         id="module-min-hp"
-        :model-value="filters.minHp === '' ? null : Number(filters.minHp)"
+        v-model="filters.hp.constraints[0].value"
+        size="small"
         :min="1"
         :use-grouping="false"
-        fluid
+        input-class="w-20"
         input-id="module-min-hp"
-        @update:model-value="update('minHp', $event ?? '')"
+        v-tooltip.top="'Mindest-HP'"
       />
-    </div>
-
-    <div>
-      <label class="mb-1.5 block text-xs font-semibold text-surface-600" for="module-max-hp">Max HP</label>
+      <label class="text-xs" for="module-min-hp">Min HP</label>
+    </FloatLabel>
+    <FloatLabel variant="on">
       <InputNumber
         id="module-max-hp"
-        :model-value="filters.maxHp === '' ? null : Number(filters.maxHp)"
+        v-model="filters.hp.constraints[1].value"
+        size="small"
         :min="1"
         :use-grouping="false"
-        fluid
+        input-class="w-20"
         input-id="module-max-hp"
-        @update:model-value="update('maxHp', $event ?? '')"
+        v-tooltip.top="'Maximale HP'"
       />
-    </div>
-
+      <label class="text-xs" for="module-max-hp">Max HP</label>
+    </FloatLabel>
     <Button
+      v-if="filtersActive"
       id="clear-filters-button"
-      type="button"
-      icon="pi pi-times"
+      icon="pi pi-filter-slash"
       severity="secondary"
-      outlined
-      aria-label="Filter und Suche leeren"
-      @click="store.clearFilters()"
+      size="small"
+      text
+      rounded
+      v-tooltip.top="'Filter zurücksetzen'"
+      @click="clearFilters"
     />
-  </form>
+  </div>
 </template>

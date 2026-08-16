@@ -1,4 +1,5 @@
 @import "tailwindcss" source(none);
+@import "@fontsource/share-tech-mono";
 
 @source ".";
 @source "../index.html";
@@ -7,6 +8,7 @@
 
 @theme {
   --font-sans: "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-brand: "Share Tech Mono", ui-monospace, monospace;
   --color-surface-0: var(--p-surface-0);
   --color-surface-50: var(--p-surface-50);
   --color-surface-100: var(--p-surface-100);
@@ -25,9 +27,261 @@
   --color-group-row: color-mix(in srgb, var(--p-primary-color) 16%, var(--p-content-background));
   --color-chip-used: color-mix(in srgb, var(--p-primary-color) 18%, transparent);
   --color-drop: color-mix(in srgb, var(--p-surface-100) 70%, transparent);
-  --color-overlay: color-mix(in srgb, var(--p-surface-900) 42%, transparent);
+  --color-overlay: color-mix(in srgb, #0b0d12 55%, transparent);
   --color-card: color-mix(in srgb, var(--p-surface-0) 92%, transparent);
   --color-card-border: color-mix(in srgb, var(--p-surface-0) 18%, transparent);
-  --color-card-dark: color-mix(in srgb, #161b24 92%, transparent);
-  --color-card-border-dark: color-mix(in srgb, var(--p-surface-0) 10%, transparent);
+  --color-card-dark: color-mix(in srgb, #11141c 92%, transparent);
+  --color-card-border-dark: color-mix(in srgb, var(--p-surface-300) 35%, transparent);
+}
+
+.module-table-shell {
+  border-color: color-mix(in srgb, var(--p-primary-color) 40%, var(--p-content-border-color));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--p-primary-color) 20%, transparent),
+    0 0 16px color-mix(in srgb, var(--p-primary-color) 16%, transparent),
+    0 0 36px color-mix(in srgb, var(--p-primary-color) 8%, transparent);
+}
+
+.p-dark .module-table-shell {
+  border-color: color-mix(in srgb, var(--p-primary-color) 52%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--p-primary-color) 28%, transparent),
+    0 0 20px color-mix(in srgb, var(--p-primary-color) 22%, transparent),
+    0 0 44px color-mix(in srgb, var(--p-primary-color) 10%, transparent);
+}
+
+.header-scope {
+  position: relative;
+  height: 4.75rem;
+  overflow: hidden;
+  pointer-events: none;
+  border-radius: 0.45rem;
+  background:
+    linear-gradient(
+      color-mix(in srgb, var(--p-primary-color) 22%, transparent) 1px,
+      transparent 1px
+    )
+    50% 50% / 100% 50% no-repeat,
+    repeating-linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--p-primary-color) 14%, transparent) 0 1px,
+      transparent 1px 12.5%
+    );
+  box-shadow: inset 0 0 18px color-mix(in srgb, var(--p-primary-color) 10%, transparent);
+}
+
+.header-scope-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .brand-mark {
+    animation: crt-idle 7s linear infinite;
+  }
+
+  .theme-mark {
+    animation: crt-idle 11.5s linear infinite;
+    animation-delay: -4.2s;
+  }
+
+  .p-dark .brand-name {
+    text-shadow: 0 0 16px color-mix(in srgb, var(--p-primary-color) 55%, transparent);
+  }
+
+  .brand-glitch {
+    animation: crt-glitch 180ms steps(2, jump-end);
+  }
+
+  .brand-glitch .brand-logo,
+  .theme-mark.brand-glitch .p-button-icon {
+    filter: brightness(1.45) contrast(1.25) saturate(1.4);
+  }
+
+  .brand-glitch .brand-name,
+  .brand-glitch .theme-label {
+    text-shadow:
+      -2px 0 #ff2bd6,
+      2px 0 #2ee6a0,
+      0 0 12px color-mix(in srgb, var(--p-primary-color) 70%, transparent);
+  }
+
+  .brand-glitch-hard {
+    animation: crt-glitch-hard 220ms steps(2, jump-end);
+  }
+
+  .module-table-shell {
+    animation: table-glow 5.5s ease-in-out infinite;
+  }
+
+  .p-dark .module-table-shell {
+    animation-name: table-glow-dark;
+  }
+
+  .module-table-shell .p-datatable-tbody > tr {
+    animation: table-row-in 280ms ease;
+  }
+
+  .module-table-shell.module-table-glitch {
+    animation: table-glitch 340ms steps(2, jump-end);
+  }
+}
+
+@keyframes crt-idle {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  12% {
+    opacity: 0.98;
+  }
+  12.4% {
+    opacity: 1;
+  }
+  61% {
+    opacity: 0.96;
+  }
+  61.6% {
+    opacity: 1;
+  }
+}
+
+@keyframes crt-glitch {
+  0% {
+    transform: translate(0, 0);
+    opacity: 1;
+    filter: none;
+  }
+  18% {
+    transform: translate(2px, -1px);
+    opacity: 0.82;
+    filter: brightness(1.5) contrast(1.3);
+  }
+  36% {
+    transform: translate(-3px, 1px);
+    opacity: 0.45;
+    filter: brightness(0.65) saturate(1.6);
+  }
+  54% {
+    transform: translate(1px, 0);
+    opacity: 1;
+    filter: hue-rotate(-18deg) brightness(1.25);
+  }
+  72% {
+    transform: translate(0, 1px);
+    opacity: 0.7;
+  }
+  100% {
+    transform: translate(0, 0);
+    opacity: 1;
+    filter: none;
+  }
+}
+
+@keyframes table-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--p-primary-color) 16%, transparent),
+      0 0 12px color-mix(in srgb, var(--p-primary-color) 12%, transparent),
+      0 0 28px color-mix(in srgb, var(--p-primary-color) 6%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--p-primary-color) 38%, transparent),
+      0 0 22px color-mix(in srgb, var(--p-primary-color) 26%, transparent),
+      0 0 48px color-mix(in srgb, var(--p-primary-color) 12%, transparent);
+  }
+}
+
+@keyframes table-glow-dark {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--p-primary-color) 24%, transparent),
+      0 0 16px color-mix(in srgb, var(--p-primary-color) 18%, transparent),
+      0 0 36px color-mix(in srgb, var(--p-primary-color) 8%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--p-primary-color) 48%, transparent),
+      0 0 26px color-mix(in srgb, var(--p-primary-color) 30%, transparent),
+      0 0 56px color-mix(in srgb, var(--p-primary-color) 16%, transparent);
+  }
+}
+
+@keyframes table-row-in {
+  from {
+    opacity: 0.35;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes table-glitch {
+  0% {
+    filter: none;
+    transform: none;
+  }
+  10% {
+    filter: blur(4px) contrast(1.5) saturate(1.8) drop-shadow(-6px 0 #ff2bd6) drop-shadow(6px 0 #2ee6a0);
+    transform: translate(-10px, 3px) skewX(-8deg);
+  }
+  22% {
+    filter: blur(1px) brightness(1.7) drop-shadow(8px 0 #2ee6a0);
+    transform: translate(12px, -4px) skewX(10deg);
+  }
+  36% {
+    filter: blur(5px) hue-rotate(-30deg) contrast(1.6);
+    transform: translate(-6px, 2px) skewX(-4deg);
+  }
+  52% {
+    filter: blur(0) brightness(0.55) saturate(2);
+    transform: translate(7px, -1px) skewX(6deg);
+  }
+  68% {
+    filter: blur(3px) brightness(1.35) drop-shadow(-4px 0 #ff2bd6) drop-shadow(4px 0 #2ee6a0);
+    transform: translate(-3px, 2px);
+  }
+  84% {
+    filter: blur(1px) contrast(1.3);
+    transform: translate(2px, 0);
+  }
+  100% {
+    filter: none;
+    transform: none;
+  }
+}
+
+@keyframes crt-glitch-hard {
+  0% {
+    transform: translate(0, 0) skewX(0deg);
+    opacity: 1;
+  }
+  15% {
+    transform: translate(-4px, 0) skewX(-8deg);
+    opacity: 0.2;
+  }
+  32% {
+    transform: translate(5px, -2px) skewX(6deg);
+    opacity: 1;
+    filter: brightness(1.8) contrast(1.5);
+  }
+  48% {
+    transform: translate(-2px, 1px);
+    opacity: 0.35;
+  }
+  70% {
+    transform: translate(2px, 0);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate(0, 0) skewX(0deg);
+    opacity: 1;
+    filter: none;
+  }
 }

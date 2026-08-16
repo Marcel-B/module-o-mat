@@ -11,6 +11,7 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    ActionMenu: typeof import('./src/components/ActionMenu.vue')['default']
     AppHeader: typeof import('./src/components/AppHeader.vue')['default']
     AutoComplete: typeof import('primevue/autocomplete')['default']
     BackupDialog: typeof import('./src/components/BackupDialog.vue')['default']
@@ -18,7 +19,10 @@ declare module 'vue' {
     Chip: typeof import('primevue/chip')['default']
     ConfirmDialog: typeof import('primevue/confirmdialog')['default']
     Dialog: typeof import('primevue/dialog')['default']
+    Dropdown: typeof import('primevue/dropdown')['default']
     FileUpload: typeof import('primevue/fileupload')['default']
+    FloatLabel: typeof import('primevue/floatlabel')['default']
+    HeaderScope: typeof import('./src/components/HeaderScope.vue')['default']
     IconField: typeof import('primevue/iconfield')['default']
     InputIcon: typeof import('primevue/inputicon')['default']
     InputNumber: typeof import('primevue/inputnumber')['default']
