@@ -1,40 +1,38 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { RouterLink } from 'vue-router'
+import { onMounted, ref } from "vue";
+import { RouterLink } from "vue-router";
 
-type ThemePreference = 'light' | 'dark' | 'system'
+type ThemePreference = "light" | "dark" | "system";
 
-const THEME_KEY = 'module-o-mat:theme'
-const stored = localStorage.getItem(THEME_KEY)
-const theme = ref<ThemePreference>(
-  stored === 'light' || stored === 'dark' || stored === 'system' ? stored : 'system',
-)
-const logoSrc = `${import.meta.env.BASE_URL}logo.svg`
+const THEME_KEY = "module-o-mat:theme";
+const stored = localStorage.getItem(THEME_KEY);
+const theme = ref<ThemePreference>(stored === "light" || stored === "dark" || stored === "system" ? stored : "system");
+const logoSrc = `${import.meta.env.BASE_URL}logo.svg`;
 
-function systemTheme(): 'light' | 'dark' {
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+function systemTheme(): "light" | "dark" {
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
 function applyTheme(next: ThemePreference) {
-  theme.value = next
-  const resolved = next === 'system' ? systemTheme() : next
-  document.documentElement.classList.toggle('p-dark', resolved === 'dark')
-  document.documentElement.setAttribute('data-theme', resolved)
-  document.documentElement.setAttribute('data-theme-source', next === 'system' ? 'system' : 'user')
+  theme.value = next;
+  const resolved = next === "system" ? systemTheme() : next;
+  document.documentElement.classList.toggle("p-dark", resolved === "dark");
+  document.documentElement.setAttribute("data-theme", resolved);
+  document.documentElement.setAttribute("data-theme-source", next === "system" ? "system" : "user");
 
-  if (next === 'system') {
-    localStorage.removeItem(THEME_KEY)
+  if (next === "system") {
+    localStorage.removeItem(THEME_KEY);
   } else {
-    localStorage.setItem(THEME_KEY, next)
+    localStorage.setItem(THEME_KEY, next);
   }
 }
 
 onMounted(() => {
-  applyTheme(theme.value)
-  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-    if ((localStorage.getItem(THEME_KEY) || 'system') === 'system') applyTheme('system')
-  })
-})
+  applyTheme(theme.value);
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+    if ((localStorage.getItem(THEME_KEY) || "system") === "system") applyTheme("system");
+  });
+});
 </script>
 
 <template>
@@ -43,7 +41,7 @@ onMounted(() => {
   >
     <RouterLink to="/" class="flex items-center gap-3 text-inherit no-underline">
       <img :src="logoSrc" alt="" width="40" height="40" class="size-10 shrink-0" />
-      <span class="text-[0.95rem] font-semibold tracking-wide">ModuleOMat</span>
+      <span class="text-[0.95rem] font-semibold tracking-wide">module-O-mat</span>
     </RouterLink>
 
     <div class="flex items-center gap-3">
@@ -51,7 +49,7 @@ onMounted(() => {
         href="/"
         class="text-sm font-semibold text-inherit no-underline opacity-70 transition-opacity duration-150 hover:opacity-100"
       >
-        Oberflächen
+        Theme
       </a>
       <div class="flex gap-0.5">
         <Button
@@ -82,3 +80,4 @@ onMounted(() => {
     </div>
   </header>
 </template>
+

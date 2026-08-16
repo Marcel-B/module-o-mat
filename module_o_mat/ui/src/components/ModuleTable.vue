@@ -1,76 +1,151 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import type { MenuItem } from 'primevue/menuitem'
-import { formatEuro, formatEuroRange, formatHpWidth, priceRangeTitle } from '../utils/format'
-import { youtubeEmbedUrl, youtubeWatchUrl } from '../utils/youtube'
-import type { InventoryStats, Module, ModuleGroup } from '../types'
-import YoutubeHoverPreview from './YoutubeHoverPreview.vue'
+import { computed, ref } from "vue";
+import { useRouter } from "vue-router";
+import { formatEuro, formatEuroRange } from "../utils/format";
+import { youtubeEmbedUrl, youtubeWatchUrl } from "../utils/youtube";
+import type { InventoryStats, Module, ModuleGroup } from "../types";
+import YoutubeHoverPreview from "@/components/YoutubeHoverPreview.vue";
+import DataTable from "primevue/datatable";
+import Column from "primevue/column";
 
 interface Props {
-  modules: Module[]
-  groups: ModuleGroup[]
-  stats?: InventoryStats | null
-  filtersActive?: boolean
-  loading?: boolean
+  modules: Module[];
+  groups: ModuleGroup[];
+  stats?: InventoryStats | null;
+  filtersActive?: boolean;
+  loading?: boolean;
 }
 
 interface Emits {
-  delete: [module: Module]
+  delete: [module: Module];
 }
 
-const props = defineProps<Props>()
-const emit = defineEmits<Emits>()
-const router = useRouter()
-const menu = ref<{ toggle: (event: Event) => void } | null>(null)
-const menuItems = ref<MenuItem[]>([])
-const activeModule = ref<Module | null>(null)
+const props = defineProps<Props>();
+const emit = defineEmits<Emits>();
+const router = useRouter();
+// Menü-Items werden in `items` gehalten
+const activeModule = ref<Module | null>(null);
 
 const emptyMessage = computed(() =>
-  props.filtersActive ? 'Keine Module gefunden.' : 'Es sind noch keine Module erfasst.',
-)
-
-function openMenu(event: Event, module: Module) {
-  activeModule.value = module
-  menuItems.value = [
-    {
-      label: 'Preisverlauf',
-      icon: 'pi pi-chart-line',
-      command: () => router.push(`/modules/${module.id}/price-history`),
-    },
-    {
-      label: 'Bearbeiten',
-      icon: 'pi pi-pencil',
-      command: () => router.push(`/modules/${module.id}/edit`),
-    },
-    {
-      label: 'Duplizieren',
-      icon: 'pi pi-copy',
-      command: () => router.push(`/modules/${module.id}/duplicate`),
-    },
-    {
-      separator: true,
-    },
-    {
-      label: 'Löschen',
-      icon: 'pi pi-trash',
-      class: 'p-danger',
-      command: () => emit('delete', module),
-    },
-  ]
-  menu.value?.toggle(event)
-}
+  props.filtersActive ? "Keine Module gefunden." : "Es sind noch keine Module erfasst.",
+);
 
 function primaryVideo(module: Module) {
-  return (module.youtube_videos || [])[0] || null
+  return (module.youtube_videos || [])[0] || null;
 }
+
+function getName(module: Module) {
+  return `${module.manufacturer} - ${module.name}`;
+}
+const menu = ref();
+const items = ref([
+  {
+    label: "Preisverlauf",
+    icon: "pi pi-chart-line",
+    command: () => router.push(`/modules/${activeModule.value?.id}/price-history`),
+  },
+  {
+    label: "Bearbeiten",
+    icon: "pi pi-pencil",
+    command: () => router.push(`/modules/${activeModule.value?.id}/edit`),
+  },
+  {
+    label: "Duplizieren",
+    icon: "pi pi-copy",
+    command: () => router.push(`/modules/${activeModule.value?.id}/duplicate`),
+  },
+  {
+    separator: true,
+  },
+  {
+    label: "Löschen",
+    icon: "pi pi-trash",
+    class: "p-danger",
+    command: () => router.push(`/modules/${activeModule.value?.id}/delete`),
+  },
+]);
+
+const toggle = (event: Event, data: Module) => {
+  activeModule.value = data;
+  menu.value.toggle(event);
+};
 </script>
 
 <template>
-  <div class="overflow-auto rounded-2xl border border-content-border bg-content shadow-[0_18px_40px_-28px_rgb(15_18_24_/_45%)]">
+  <DataTable
+    :value="modules"
+    size="small"
+    row-group-mode="subheader"
+    scrollable
+    group-rows-by="type"
+    responsive-layout="scroll"
+  >
+    <template #empty>
+      <p
+        v-if="!loading && modules.length === 0"
+        id="no-eurorack-modules"
+        class="px-4 py-10 text-center text-surface-600"
+      >
+        {{ emptyMessage }}
+      </p>
+    </template>
+    <Column field="type" header="Typ" />
+    <Column field="name" header="Name">
+      <template #body="{ data }"> {{ getName(data) }} </template>
+    </Column>
+    <Column field="hp" header="HP" />
+    <Column field="purchase_price" header="Kaufpreis">
+      <template #body="{ data }"> {{ formatEuro(data.purchase_price) }} </template>
+    </Column>
+    <Column field="current_value" header="Wert">
+      <template #body="{ data }">
+        {{ formatEuroRange(data.price_range, data.current_value) }}
+      </template>
+    </Column>
+    <Column width="11.5rem" header="">
+      <template #body="{ data }">
+        <div class="flex gap-2 justify-center align-baseline">
+          <a :href="`/api/v1/modules/${data.id}/manual`" target="_blank" rel="noopener noreferrer">
+            <Button :disabled="!data.has_manual" icon="pi pi-file-pdf" severity="secondary" text rounded></Button>
+          </a>
+
+          <div class="w-12 flex justify-center">
+            <YoutubeHoverPreview
+              v-if="primaryVideo(data)"
+              :id="`open-youtube-${data.id}`"
+              :watch-url="youtubeWatchUrl(primaryVideo(data).url)"
+              :embed-url="youtubeEmbedUrl(primaryVideo(data).url, { autoplay: true, mute: true })"
+            />
+            <Button v-else icon="pi pi-youtube" severity="secondary" text rounded> </Button>
+          </div>
+          <RouterLink :to="`/modules/${data.id}`">
+            <Button icon="pi pi-eye" text severity="secondary" rounded></Button>
+          </RouterLink>
+          <Button
+            type="button"
+            rounded
+            text
+            icon="pi pi-ellipsis-v"
+            @click="toggle($event, data)"
+            aria-haspopup="true"
+            aria-controls="overlay_menu"
+          />
+        </div>
+      </template>
+    </Column>
+    <template #groupheader="{ data }">
+      <div class="flex items-center gap-2 font-bold">
+        <span>{{ data.type }}</span>
+        <span class="text-surface-600">({{ modules.filter((x) => x.type === data.type).length }}) </span>
+      </div>
+    </template>
+  </DataTable>
+  <div
+    class="overflow-auto rounded-2xl border border-content-border bg-content shadow-[0_18px_40px_-28px_rgb(15_18_24/45%)]"
+  >
     <ProgressBar v-if="loading" mode="indeterminate" style="height: 3px" />
 
-    <p v-if="!loading && modules.length === 0" id="no-eurorack-modules" class="px-4 py-10 text-center text-surface-600">
+    <!-- <p v-if="!loading && modules.length === 0" id="no-eurorack-modules" class="px-4 py-10 text-center text-surface-600">
       {{ emptyMessage }}
     </p>
 
@@ -200,7 +275,7 @@ function primaryVideo(module: Module) {
       <tfoot v-if="stats" id="inventory-stats" class="font-semibold">
         <tr>
           <td class="border-t-2 border-content-border px-[0.9rem] py-[0.7rem] text-left align-middle">
-            {{ stats.count }} {{ stats.count === 1 ? 'Modul' : 'Module' }}
+            {{ stats.count }} {{ stats.count === 1 ? "Modul" : "Module" }}
             <span class="mt-0.5 block text-xs font-medium text-surface-500">{{ formatHpWidth(stats) }}</span>
           </td>
           <td
@@ -221,8 +296,8 @@ function primaryVideo(module: Module) {
           <td class="border-t-2 border-content-border"></td>
         </tr>
       </tfoot>
-    </table>
-
-    <Menu ref="menu" :model="menuItems" popup />
+    </table> -->
+    <Menu ref="menu" id="overlay_menu" :model="items" popup />
   </div>
 </template>
+
