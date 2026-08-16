@@ -734,6 +734,21 @@ defmodule ModuleOMat.InventoryTest do
     end
   end
 
+  describe "get_active_eurorack_module/2" do
+    test "liefert aktive Module und ignoriert Soft-Deletes" do
+      module = eurorack_module_fixture()
+      assert %EurorackModule{id: id} = Inventory.get_active_eurorack_module(module.id)
+      assert id == module.id
+
+      {:ok, _} = Inventory.soft_delete_eurorack_module(module)
+      assert Inventory.get_active_eurorack_module(module.id) == nil
+
+      assert_raise Ecto.NoResultsError, fn ->
+        Inventory.get_active_eurorack_module!(module.id)
+      end
+    end
+  end
+
   describe "attach_manual/2" do
     @fixture Path.expand("../support/fixtures/files/sample.pdf", __DIR__)
 

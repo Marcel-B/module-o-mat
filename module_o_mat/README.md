@@ -35,6 +35,41 @@ mix phx.server
 Die Oberfläche ist danach unter [http://localhost:4000](http://localhost:4000)
 erreichbar.
 
+## HTTP-API
+
+Die JSON-REST-API liegt unter `/api/v1`. Interaktive Dokumentation
+(Swagger UI) unter
+[http://localhost:4000/api/docs](http://localhost:4000/api/docs),
+OpenAPI-Spec unter
+[http://localhost:4000/api/openapi](http://localhost:4000/api/openapi).
+
+Keine Authentifizierung (LAN-Homelab). LiveView bleibt parallel bestehen.
+
+### `/api/v1` (Vue / HTTP-Clients)
+
+- `GET /api/v1/modules` — Liste, Query: `q`, `types`, `min_hp`, `max_hp`;
+  Response inkl. `stats`
+- `GET /api/v1/modules/:id` — Detail inkl. YouTube und Preisbeobachtungen
+- `POST /api/v1/modules` — anlegen (`{"module": {...}}`)
+- `PATCH /api/v1/modules/:id` — aktualisieren
+- `DELETE /api/v1/modules/:id` — Soft-Delete
+- `POST /api/v1/modules/:id/duplicate` — Kopie (`copy_manual`, optional `module`)
+- `POST /api/v1/modules/:id/valuations` — Preisbeobachtungen speichern
+- `GET|PUT|DELETE /api/v1/modules/:id/manual` — PDF lesen / hochladen / entfernen
+- `GET|POST /api/v1/module-types`, `PATCH|DELETE /api/v1/module-types/:id`
+- `GET /api/v1/manufacturers` — Autocomplete
+- `GET /api/v1/backup/export` — ZIP-Download
+- `POST /api/v1/backup/import` — ZIP-Upload, ersetzt den Bestand
+
+### `/api/modules` (Bewertungs-Agent)
+
+Unverändert schmales Payload, siehe
+[`priv/agent_prompts/module_valuation.md`](priv/agent_prompts/module_valuation.md):
+
+- `GET /api/modules`
+- `GET /api/modules/:id`
+- `POST /api/modules/:id/valuations`
+
 ## Tests
 
 ```bash

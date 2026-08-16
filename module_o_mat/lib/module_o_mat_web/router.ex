@@ -12,6 +12,7 @@ defmodule ModuleOMatWeb.Router do
 
   pipeline :api do
     plug :accepts, ["json"]
+    plug OpenApiSpex.Plug.PutApiSpec, module: ModuleOMatWeb.ApiSpec
   end
 
   scope "/", ModuleOMatWeb do
@@ -29,12 +30,49 @@ defmodule ModuleOMatWeb.Router do
     get "/backup/export", BackupController, :export
   end
 
-  # Other scopes may use custom stacks.
+  scope "/api" do
+    pipe_through :browser
+
+    get "/docs", OpenApiSpex.Plug.SwaggerUI, path: "/api/openapi"
+  end
+
+  scope "/api" do
+    pipe_through :api
+
+    get "/openapi", OpenApiSpex.Plug.RenderSpec, []
+  end
+
   scope "/api", ModuleOMatWeb.Api do
     pipe_through :api
 
     get "/modules", ModuleController, :index
     get "/modules/:id", ModuleController, :show
     post "/modules/:id/valuations", ModuleController, :create_valuations
+  end
+
+  scope "/api/v1", ModuleOMatWeb.Api.V1 do
+    pipe_through :api
+
+    get "/modules", ModuleController, :index
+    get "/modules/:id", ModuleController, :show
+    post "/modules", ModuleController, :create
+    patch "/modules/:id", ModuleController, :update
+    delete "/modules/:id", ModuleController, :delete
+    post "/modules/:id/duplicate", ModuleController, :duplicate
+    post "/modules/:id/valuations", ModuleController, :create_valuations
+
+    get "/modules/:id/manual", ModuleController, :show_manual
+    put "/modules/:id/manual", ModuleController, :update_manual
+    delete "/modules/:id/manual", ModuleController, :delete_manual
+
+    get "/module-types", ModuleTypeController, :index
+    post "/module-types", ModuleTypeController, :create
+    patch "/module-types/:id", ModuleTypeController, :update
+    delete "/module-types/:id", ModuleTypeController, :delete
+
+    get "/manufacturers", LookupController, :manufacturers
+
+    get "/backup/export", BackupController, :export
+    post "/backup/import", BackupController, :import_backup
   end
 end
