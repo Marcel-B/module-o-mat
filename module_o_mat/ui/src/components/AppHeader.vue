@@ -37,11 +37,13 @@ onMounted(() => {
 
 <template>
   <header
-    class="sticky top-0 z-20 flex min-h-16 items-center justify-between gap-4 border-b border-header-border bg-header px-6 py-3 backdrop-blur-lg"
+    class="sticky top-0 z-20 flex min-h-24 items-center justify-between gap-4 border-b border-header-border bg-header px-6 py-3 backdrop-blur-lg"
   >
     <RouterLink to="/" class="flex items-center gap-3 text-inherit no-underline">
-      <img :src="logoSrc" alt="" width="40" height="40" class="size-10 shrink-0" />
-      <span class="text-[0.95rem] font-semibold tracking-wide">module-O-mat</span>
+      <img :src="logoSrc" alt="" width="80" height="80" class="size-20 shrink-0" />
+      <span 
+        class="font-brand text-[2rem] leading-none tracking-[0.14em] text-primary dark:[text-shadow:0_0_16px_color-mix(in_srgb,var(--p-primary-color)_55%,transparent)]"
+      >module-O-mat</span>
     </RouterLink>
 
     <div class="flex items-center gap-3">

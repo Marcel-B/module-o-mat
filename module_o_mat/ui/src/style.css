@@ -1,4 +1,5 @@
 @import "tailwindcss" source(none);
+@import "@fontsource/share-tech-mono";
 
 @source ".";
 @source "../index.html";
@@ -7,6 +8,7 @@
 
 @theme {
   --font-sans: "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-brand: "Share Tech Mono", ui-monospace, monospace;
   --color-surface-0: var(--p-surface-0);
   --color-surface-50: var(--p-surface-50);
   --color-surface-100: var(--p-surface-100);
