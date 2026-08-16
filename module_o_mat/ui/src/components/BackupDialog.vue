@@ -2,9 +2,11 @@
 import { ref } from 'vue'
 import type { FileUploadSelectEvent } from 'primevue/fileupload'
 
-defineProps<{
+interface Props {
   visible?: boolean
-}>()
+}
+
+defineProps<Props>()
 
 const emit = defineEmits<{
   close: []

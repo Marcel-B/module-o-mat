@@ -13,13 +13,15 @@ import {
 import { formatBytes } from '../utils/format'
 import type { Module, ModuleFormMode, ModuleFormSubmit, ModuleFormValues } from '../types'
 
-const props = defineProps<{
+interface Props {
   mode: ModuleFormMode
   module?: Module | null
   manufacturers?: string[]
   types?: string[]
   saving?: boolean
-}>()
+}
+
+const props = defineProps<Props>()
 
 const emit = defineEmits<{
   submit: [value: ModuleFormSubmit]

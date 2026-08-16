@@ -6,10 +6,12 @@ import { buildPriceChartData, chartJsConfig, type ChartJsDataset, type PriceChar
 import { formatDate, formatEuro } from '../utils/format'
 import type { Module } from '../types'
 
-const props = defineProps<{
+interface Props {
   visible?: boolean
   module?: Module | null
-}>()
+}
+
+const props = defineProps<Props>()
 
 const emit = defineEmits<{
   close: []

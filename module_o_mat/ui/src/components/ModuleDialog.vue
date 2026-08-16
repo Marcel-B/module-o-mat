@@ -3,15 +3,17 @@ import { computed } from 'vue'
 import type { Module, ModuleFormMode, ModuleFormSubmit } from '../types'
 import ModuleForm from './ModuleForm.vue'
 
+interface Props {
+  visible?: boolean
+  mode?: ModuleFormMode
+  module?: Module | null
+  manufacturers?: string[]
+  types?: string[]
+  saving?: boolean
+}
+
 const props = withDefaults(
-  defineProps<{
-    visible?: boolean
-    mode?: ModuleFormMode
-    module?: Module | null
-    manufacturers?: string[]
-    types?: string[]
-    saving?: boolean
-  }>(),
+  defineProps<Props>(),
   {
     mode: 'new',
     manufacturers: () => [],

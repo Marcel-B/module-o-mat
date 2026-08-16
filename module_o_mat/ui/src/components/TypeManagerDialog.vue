@@ -5,11 +5,13 @@ import { toTypedSchema } from '@vee-validate/yup'
 import { moduleTypeSchema } from '../validation/schemas'
 import type { ModuleType } from '../types'
 
+interface Props {
+  visible?: boolean
+  types?: ModuleType[]
+}
+
 withDefaults(
-  defineProps<{
-    visible?: boolean
-    types?: ModuleType[]
-  }>(),
+  defineProps<Props>(),
   {
     types: () => [],
   },

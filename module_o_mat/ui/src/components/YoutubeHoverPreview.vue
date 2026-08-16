@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { onBeforeUnmount, ref } from 'vue'
 
-const props = defineProps<{
+interface Props {
   id: string
   watchUrl?: string | null
   embedUrl?: string | null
-}>()
+}
+
+const props = defineProps<Props>()
 
 const overlay = ref<HTMLDivElement | null>(null)
 

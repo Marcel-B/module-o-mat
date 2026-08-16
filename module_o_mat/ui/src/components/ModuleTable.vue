@@ -7,13 +7,15 @@ import { youtubeEmbedUrl, youtubeWatchUrl } from '../utils/youtube'
 import type { InventoryStats, Module, ModuleGroup } from '../types'
 import YoutubeHoverPreview from './YoutubeHoverPreview.vue'
 
-const props = defineProps<{
+interface Props {
   modules: Module[]
   groups: ModuleGroup[]
   stats?: InventoryStats | null
   filtersActive?: boolean
   loading?: boolean
-}>()
+}
+
+const props = defineProps<Props>()
 
 const emit = defineEmits<{
   delete: [module: Module]
