@@ -22,6 +22,8 @@ npm run dev
 
 Die App liegt dann unter [http://localhost:5174](http://localhost:5174).
 `/api` wird nach `http://localhost:4000` geproxied (kein CORS).
+Über die Phoenix-Landing-Page ist der Produktions-Build unter
+[http://localhost:4000/ui-alt](http://localhost:4000/ui-alt) erreichbar.
 
 ## Was die UI können soll
 

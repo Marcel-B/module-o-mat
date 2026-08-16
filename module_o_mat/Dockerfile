@@ -24,6 +24,20 @@ ARG DEBIAN_VERSION=trixie-20260803-slim
 ARG BUILDER_IMAGE="docker.io/hexpm/elixir:${ELIXIR_VERSION}-erlang-${OTP_VERSION}-debian-${DEBIAN_VERSION}"
 ARG RUNNER_IMAGE="docker.io/debian:${DEBIAN_VERSION}"
 
+FROM node:22-bookworm-slim AS vue-ui
+WORKDIR /src
+COPY ui/package.json ui/package-lock.json ./
+RUN npm ci
+COPY ui/ ./
+RUN npm run build && mv dist /out
+
+FROM node:22-bookworm-slim AS vue-ui-alt
+WORKDIR /src
+COPY ui-alt/package.json ui-alt/package-lock.json ./
+RUN npm ci
+COPY ui-alt/ ./
+RUN npm run build && mv dist /out
+
 FROM ${BUILDER_IMAGE} AS builder
 
 # install build dependencies (sqlite3 headers for exqlite/ecto_sqlite3)
@@ -55,6 +69,9 @@ RUN mix deps.compile
 RUN mix assets.setup
 
 COPY priv priv
+
+COPY --from=vue-ui /out priv/vue/ui
+COPY --from=vue-ui-alt /out priv/vue/ui-alt
 
 COPY lib lib
 

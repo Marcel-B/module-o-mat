@@ -101,6 +101,63 @@ jobs:
           path: module_o_mat/cover
           retention-days: 14
 
+  ui:
+    name: Vue UI bauen & testen
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: module_o_mat/ui
+
+    steps:
+      - name: Code auschecken
+        uses: actions/checkout@v4
+
+      - name: Node.js einrichten
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: module_o_mat/ui/package-lock.json
+
+      - name: Abhaengigkeiten installieren
+        run: npm ci
+
+      - name: Typen pruefen
+        run: npm run typecheck
+
+      - name: Tests ausfuehren
+        run: npm test
+
+      - name: Produktions-Build
+        run: npm run build
+
+  ui-alt:
+    name: Vue UI-Alt bauen
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: module_o_mat/ui-alt
+
+    steps:
+      - name: Code auschecken
+        uses: actions/checkout@v4
+
+      - name: Node.js einrichten
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: module_o_mat/ui-alt/package-lock.json
+
+      - name: Abhaengigkeiten installieren
+        run: npm ci
+
+      - name: Typen pruefen
+        run: npm run typecheck
+
+      - name: Produktions-Build
+        run: npm run build
+
   pages:
     name: Docs & Coverage veroeffentlichen
     needs: build-and-test
@@ -193,7 +250,7 @@ jobs:
 
   docker:
     name: Docker Image nach GHCR
-    needs: build-and-test
+    needs: [build-and-test, ui, ui-alt]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     permissions:

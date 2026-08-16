@@ -31,6 +31,8 @@ defmodule ModuleOMatWeb.Layouts do
     default: nil,
     doc: "the current [scope](https://phoenix.hexdocs.pm/scopes.html)"
 
+  attr :wide, :boolean, default: false, doc: "use a wider content column"
+
   slot :inner_block, required: true
 
   def app(assigns) do
@@ -42,13 +44,16 @@ defmodule ModuleOMatWeb.Layouts do
           <span class="text-sm font-semibold">ModuleOMat</span>
         </a>
       </div>
-      <div class="flex-none">
+      <div class="flex-none flex items-center gap-2">
+        <.link href={~p"/"} id="ui-picker-link" class="btn btn-ghost btn-sm">
+          Oberflächen
+        </.link>
         <.theme_toggle />
       </div>
     </header>
 
     <main class="px-4 py-20 sm:px-6 lg:px-8">
-      <div class="mx-auto max-w-4xl space-y-4">
+      <div class={["mx-auto space-y-4", if(@wide, do: "max-w-6xl", else: "max-w-4xl")]}>
         {render_slot(@inner_block)}
       </div>
     </main>

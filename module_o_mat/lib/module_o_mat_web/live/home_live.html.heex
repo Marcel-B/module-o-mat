@@ -1,0 +1,115 @@
+<Layouts.app flash={@flash} wide>
+  <section id="ui-picker" class="space-y-10">
+    <div class="space-y-3">
+      <p class="text-sm font-medium tracking-[0.18em] text-primary uppercase">
+        ModuleOMat
+      </p>
+      <h1 class="text-3xl font-semibold tracking-tight text-pretty sm:text-4xl">
+        Welche Oberfläche möchtest du nutzen?
+      </h1>
+      <p class="max-w-2xl text-base leading-relaxed text-base-content/70">
+        Drei UIs, ein Inventar. Die LiveView kommt direkt aus Phoenix, die Vue-Varianten
+        sprechen dieselbe API an und bleiben jederzeit wechselbar.
+      </p>
+    </div>
+
+    <div class="grid gap-4 md:grid-cols-3">
+      <article
+        id="ui-choice-live-card"
+        class="group flex h-full flex-col rounded-2xl border border-base-300 bg-base-100 p-6 shadow-sm transition duration-200 hover:-translate-y-1 hover:border-primary/40 hover:shadow-lg"
+      >
+        <div class="mb-5 flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary transition group-hover:bg-primary group-hover:text-primary-content">
+          <.icon name="hero-bolt" class="size-6" />
+        </div>
+        <p class="text-xs font-semibold tracking-wide text-primary uppercase">Phoenix</p>
+        <h2 class="mt-1 text-xl font-semibold">LiveView</h2>
+        <p class="mt-3 grow text-sm leading-relaxed text-base-content/70">
+          Die serverseitige Original-Oberfläche: Echtzeit, Formulare und Dialoge ohne
+          extra Frontend-Build.
+        </p>
+        <ul class="mt-4 space-y-2 text-sm text-base-content/80">
+          <li class="flex items-start gap-2">
+            <.icon name="hero-check" class="mt-0.5 size-4 shrink-0 text-success" />
+            <span>Direkt aus Elixir gerendert</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <.icon name="hero-check" class="mt-0.5 size-4 shrink-0 text-success" />
+            <span>Volle Inventar-Funktion</span>
+          </li>
+        </ul>
+        <.link
+          href={~p"/live"}
+          id="ui-choice-live"
+          class="btn btn-primary mt-6 w-full transition group-hover:brightness-105"
+        >
+          LiveView öffnen
+        </.link>
+      </article>
+
+      <article
+        id="ui-choice-vue-card"
+        class="group flex h-full flex-col rounded-2xl border border-base-300 bg-base-100 p-6 shadow-sm transition duration-200 hover:-translate-y-1 hover:border-primary/40 hover:shadow-lg"
+      >
+        <div class="mb-5 flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary transition group-hover:bg-primary group-hover:text-primary-content">
+          <.icon name="hero-window" class="size-6" />
+        </div>
+        <p class="text-xs font-semibold tracking-wide text-primary uppercase">Vue 3</p>
+        <h2 class="mt-1 text-xl font-semibold">PrimeVue UI</h2>
+        <p class="mt-3 grow text-sm leading-relaxed text-base-content/70">
+          Fertige SPA mit PrimeVue, VeeValidate und Pinia. Spricht die JSON-API unter
+          <code class="text-xs">/api/v1</code>
+          an.
+        </p>
+        <ul class="mt-4 space-y-2 text-sm text-base-content/80">
+          <li class="flex items-start gap-2">
+            <.icon name="hero-check" class="mt-0.5 size-4 shrink-0 text-success" />
+            <span>Komplette Feature-Parität</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <.icon name="hero-check" class="mt-0.5 size-4 shrink-0 text-success" />
+            <span>Suche, Filter und Preisverlauf</span>
+          </li>
+        </ul>
+        <.link
+          href={~p"/ui"}
+          id="ui-choice-vue"
+          class="btn btn-primary mt-6 w-full transition group-hover:brightness-105"
+        >
+          Vue UI öffnen
+        </.link>
+      </article>
+
+      <article
+        id="ui-choice-vue-alt-card"
+        class="group flex h-full flex-col rounded-2xl border border-base-300 bg-base-100 p-6 shadow-sm transition duration-200 hover:-translate-y-1 hover:border-primary/40 hover:shadow-lg"
+      >
+        <div class="mb-5 flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary transition group-hover:bg-primary group-hover:text-primary-content">
+          <.icon name="hero-sparkles" class="size-6" />
+        </div>
+        <p class="text-xs font-semibold tracking-wide text-primary uppercase">Vue 3</p>
+        <h2 class="mt-1 text-xl font-semibold">Alternative UI</h2>
+        <p class="mt-3 grow text-sm leading-relaxed text-base-content/70">
+          Zweite Vue-Implementierung auf demselben Stack. Ideal zum Vergleichen oder
+          Weiterbauen.
+        </p>
+        <ul class="mt-4 space-y-2 text-sm text-base-content/80">
+          <li class="flex items-start gap-2">
+            <.icon name="hero-check" class="mt-0.5 size-4 shrink-0 text-success" />
+            <span>Eigener Look, gleiche API</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <.icon name="hero-check" class="mt-0.5 size-4 shrink-0 text-success" />
+            <span>Unabhängig von der PrimeVue-UI</span>
+          </li>
+        </ul>
+        <.link
+          href={~p"/ui-alt"}
+          id="ui-choice-vue-alt"
+          class="btn btn-primary mt-6 w-full transition group-hover:brightness-105"
+        >
+          Alternative UI öffnen
+        </.link>
+      </article>
+    </div>
+  </section>
+</Layouts.app>

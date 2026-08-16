@@ -18,7 +18,9 @@ defmodule ModuleOMatWeb.Router do
   scope "/", ModuleOMatWeb do
     pipe_through :browser
 
-    live "/", EurorackModuleLive.Index, :index
+    live "/", HomeLive, :index
+
+    live "/live", EurorackModuleLive.Index, :index
     live "/eurorack_modules/new", EurorackModuleLive.Index, :new
     get "/eurorack_modules/:id/manual", ManualController, :show
     live "/eurorack_modules/:id/price_history", EurorackModuleLive.Index, :price_history
@@ -28,6 +30,11 @@ defmodule ModuleOMatWeb.Router do
     live "/module_types", EurorackModuleLive.Index, :manage_types
     live "/backup", EurorackModuleLive.Index, :backup
     get "/backup/export", BackupController, :export
+
+    get "/ui", SpaController, :ui
+    get "/ui/*path", SpaController, :ui
+    get "/ui-alt", SpaController, :ui_alt
+    get "/ui-alt/*path", SpaController, :ui_alt
   end
 
   scope "/api" do

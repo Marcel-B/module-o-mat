@@ -9,5 +9,6 @@
     "noFallthroughCasesInSwitch": true,
     "verbatimModuleSyntax": true
   },
-  "include": ["env.d.ts", "src/**/*", "src/**/*.vue", "components.d.ts"]
+  "include": ["env.d.ts", "src/**/*", "src/**/*.vue", "components.d.ts"],
+  "exclude": ["src/**/*.spec.ts"]
 }

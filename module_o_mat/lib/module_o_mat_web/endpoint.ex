@@ -30,6 +30,18 @@ defmodule ModuleOMatWeb.Endpoint do
     only_matching: ["favicon", "apple-touch-icon"],
     raise_on_missing_only: code_reloading?
 
+  # Vue production builds live outside priv/static so phx.digest does not
+  # rewrite their already-hashed asset filenames.
+  plug Plug.Static,
+    at: "/ui",
+    from: {:module_o_mat, "priv/vue/ui"},
+    gzip: false
+
+  plug Plug.Static,
+    at: "/ui-alt",
+    from: {:module_o_mat, "priv/vue/ui-alt"},
+    gzip: false
+
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.
   if code_reloading? do

@@ -4,6 +4,7 @@ import Components from 'unplugin-vue-components/vite'
 import { PrimeVueResolver } from '@primevue/auto-import-resolver'
 
 export default defineConfig({
+  base: process.env.VITE_BASE || (process.env.NODE_ENV === 'production' ? '/ui-alt/' : '/'),
   plugins: [
     vue(),
     Components({
