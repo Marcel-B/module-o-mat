@@ -35,6 +35,20 @@ mix phx.server
 Die Oberfläche ist danach unter [http://localhost:4000](http://localhost:4000)
 erreichbar.
 
+## Vue-UIs
+
+Zwei Vue-3-Oberflächen liegen neben der LiveView. Beide sprechen `/api/v1`
+an; Vite proxied in der Entwicklung nach `http://localhost:4000`.
+
+- [`ui/`](ui/README.md) — fertige PrimeVue-Variante (VeeValidate + Yup, Pinia).
+  Start: `cd ui && npm install && npm run dev` →
+  [http://localhost:5173](http://localhost:5173)
+- [`ui-alt/`](ui-alt/README.md) — Platzhalter für eine zweite Implementierung.
+  Start: `cd ui-alt && npm install && npm run dev` →
+  [http://localhost:5174](http://localhost:5174)
+
+Phoenix (`mix phx.server`) muss parallel laufen.
+
 ## HTTP-API
 
 Die JSON-REST-API liegt unter `/api/v1`. Interaktive Dokumentation

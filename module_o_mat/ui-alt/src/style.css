@@ -1,0 +1,38 @@
+:root {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: var(--p-surface-50);
+  color: var(--p-surface-900);
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  min-height: 4rem;
+  padding: 0 1.5rem;
+  border-bottom: 1px solid var(--p-content-border-color);
+}
+
+.app-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  color: inherit;
+  text-decoration: none;
+  font-weight: 650;
+}
+
+.app-main {
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+.checklist {
+  display: grid;
+  gap: 0.45rem;
+  padding-left: 1.2rem;
+}
