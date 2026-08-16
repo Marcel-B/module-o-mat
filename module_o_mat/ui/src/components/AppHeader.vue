@@ -42,7 +42,7 @@ onMounted(() => {
     class="sticky top-0 z-20 flex min-h-16 items-center justify-between gap-4 border-b border-header-border bg-header px-6 py-3 backdrop-blur-lg"
   >
     <RouterLink to="/" class="flex items-center gap-3 text-inherit no-underline">
-      <img :src="logoSrc" alt="" width="36" class="h-auto w-9" />
+      <img :src="logoSrc" alt="" width="40" height="40" class="size-10 shrink-0" />
       <span class="text-[0.95rem] font-semibold tracking-wide">ModuleOMat</span>
     </RouterLink>
 
