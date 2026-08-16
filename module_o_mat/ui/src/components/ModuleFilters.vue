@@ -18,9 +18,13 @@ function update(field: keyof ModuleFilters, value: string | number | null | unde
 </script>
 
 <template>
-  <form id="module-filter-form" class="filter-row" @submit.prevent>
+  <form
+    id="module-filter-form"
+    class="mb-5 grid grid-cols-1 items-end gap-3 min-[781px]:grid-cols-[minmax(0,1fr)_12rem_5.5rem_5.5rem_auto]"
+    @submit.prevent
+  >
     <div>
-      <label class="field-label" for="module-search-input">Suche</label>
+      <label class="mb-1.5 block text-xs font-semibold text-surface-600" for="module-search-input">Suche</label>
       <IconField>
         <InputIcon class="pi pi-search" />
         <InputText
@@ -34,7 +38,7 @@ function update(field: keyof ModuleFilters, value: string | number | null | unde
     </div>
 
     <div>
-      <label class="field-label" for="module-type-filter">Typ</label>
+      <label class="mb-1.5 block text-xs font-semibold text-surface-600" for="module-type-filter">Typ</label>
       <Select
         id="module-type-filter"
         :model-value="filters.type"
@@ -47,7 +51,7 @@ function update(field: keyof ModuleFilters, value: string | number | null | unde
     </div>
 
     <div>
-      <label class="field-label" for="module-min-hp">Min HP</label>
+      <label class="mb-1.5 block text-xs font-semibold text-surface-600" for="module-min-hp">Min HP</label>
       <InputNumber
         id="module-min-hp"
         :model-value="filters.minHp === '' ? null : Number(filters.minHp)"
@@ -60,7 +64,7 @@ function update(field: keyof ModuleFilters, value: string | number | null | unde
     </div>
 
     <div>
-      <label class="field-label" for="module-max-hp">Max HP</label>
+      <label class="mb-1.5 block text-xs font-semibold text-surface-600" for="module-max-hp">Max HP</label>
       <InputNumber
         id="module-max-hp"
         :model-value="filters.maxHp === '' ? null : Number(filters.maxHp)"

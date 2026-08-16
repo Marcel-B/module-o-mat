@@ -20,7 +20,10 @@ app.use(PrimeVue, {
     preset: ModuleOMatPreset,
     options: {
       darkModeSelector: '.p-dark',
-      cssLayer: false,
+      cssLayer: {
+        name: 'primevue',
+        order: 'theme, base, primevue, utilities',
+      },
     },
   },
   locale: {

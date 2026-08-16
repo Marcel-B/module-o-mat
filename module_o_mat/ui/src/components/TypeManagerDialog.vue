@@ -69,16 +69,16 @@ const onRename = handleEditSubmit((values) => {
     :draggable="false"
     @update:visible="emit('close')"
   >
-    <div class="mb-block">
-      <h4>Vorhandene Typen</h4>
-      <p class="hint">Bereits verwendete Typen sind farblich hervorgehoben.</p>
-      <p v-if="types.length === 0" class="hint">Es sind noch keine Typen definiert.</p>
-      <ul v-else id="module-types-list" class="type-chips">
+    <div class="mb-5">
+      <h4 class="mb-1.5 text-[0.95rem] font-semibold">Vorhandene Typen</h4>
+      <p class="mb-3 text-sm text-surface-500">Bereits verwendete Typen sind farblich hervorgehoben.</p>
+      <p v-if="types.length === 0" class="mb-3 text-sm text-surface-500">Es sind noch keine Typen definiert.</p>
+      <ul v-else id="module-types-list" class="m-0 flex list-none flex-wrap gap-2 p-0">
         <li v-for="type in types" :id="`module-type-${type.id}`" :key="type.id">
           <form
             v-if="editingId === type.id"
             :id="`module-type-edit-form-${type.id}`"
-            class="edit-row"
+            class="flex items-center gap-1"
             @submit.prevent="onRename"
           >
             <InputText
@@ -95,15 +95,19 @@ const onRename = handleEditSubmit((values) => {
               aria-label="Bearbeiten abbrechen"
               @click="cancelEdit"
             />
-            <small v-if="editErrors.name" class="field-error">{{ editErrors.name }}</small>
+            <small v-if="editErrors.name" class="mt-1.5 block text-sm text-danger">{{ editErrors.name }}</small>
           </form>
-          <span v-else class="type-chip" :class="{ used: type.used }">
+          <span
+            v-else
+            class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-sm"
+            :class="type.used ? 'border-transparent bg-chip-used' : 'border-content-border'"
+          >
             {{ type.name }}
             <button
               v-if="!type.fallback"
               :id="`edit-module-type-${type.id}`"
               type="button"
-              class="chip-btn"
+              class="cursor-pointer border-0 bg-transparent p-0.5 text-inherit"
               :aria-label="`Typ ${type.name} bearbeiten`"
               @click="startEdit(type)"
             >
@@ -113,7 +117,7 @@ const onRename = handleEditSubmit((values) => {
               v-if="!type.fallback"
               :id="`delete-module-type-${type.id}`"
               type="button"
-              class="chip-btn"
+              class="cursor-pointer border-0 bg-transparent p-0.5 text-inherit"
               :aria-label="`Typ ${type.name} löschen`"
               @click="emit('delete', type)"
             >
@@ -125,7 +129,7 @@ const onRename = handleEditSubmit((values) => {
     </div>
 
     <form id="module-type-form" @submit.prevent="onCreate">
-      <label class="field-label" for="new-module-type">Neuer Typ</label>
+      <label class="mb-1.5 block text-xs font-semibold text-surface-600" for="new-module-type">Neuer Typ</label>
       <InputText
         id="new-module-type"
         v-model="name"
@@ -133,73 +137,11 @@ const onRename = handleEditSubmit((values) => {
         placeholder="z.B. Granular"
         fluid
       />
-      <small v-if="errors.name" class="field-error">{{ errors.name }}</small>
-      <div class="dialog-actions">
+      <small v-if="errors.name" class="mt-1.5 block text-sm text-danger">{{ errors.name }}</small>
+      <div class="mt-4 flex justify-end gap-2">
         <Button id="close-module-types-button" type="button" label="Schließen" severity="secondary" @click="emit('close')" />
         <Button id="add-module-type-button" type="submit" label="Hinzufügen" />
       </div>
     </form>
   </Dialog>
 </template>
-
-<style scoped>
-.mb-block {
-  margin-bottom: 1.25rem;
-}
-
-h4 {
-  margin: 0 0 0.4rem;
-  font-size: 0.95rem;
-}
-
-.hint {
-  margin: 0 0 0.75rem;
-  color: var(--p-surface-500);
-  font-size: 0.85rem;
-}
-
-.type-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  padding: 0;
-  margin: 0;
-  list-style: none;
-}
-
-.type-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.3rem 0.55rem;
-  border-radius: 999px;
-  border: 1px solid var(--p-content-border-color);
-  font-size: 0.85rem;
-}
-
-.type-chip.used {
-  background: color-mix(in srgb, var(--p-primary-color) 18%, transparent);
-  border-color: transparent;
-}
-
-.chip-btn {
-  border: 0;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  padding: 0.1rem;
-}
-
-.edit-row {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.dialog-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  margin-top: 1rem;
-}
-</style>

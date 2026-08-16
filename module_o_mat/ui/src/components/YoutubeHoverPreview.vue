@@ -20,13 +20,13 @@ function show(event: MouseEvent) {
 
   const node = document.createElement('div')
   node.id = `youtube-preview-${props.id}`
-  node.style.cssText =
-    'position:fixed;z-index:50;width:20rem;max-width:min(20rem,calc(100vw - 1.5rem));overflow:hidden;border-radius:0.75rem;border:1px solid var(--p-content-border-color);background:var(--p-content-background);box-shadow:0 18px 40px rgb(15 18 24 / 28%);pointer-events:none;'
+  node.className =
+    'pointer-events-none fixed z-50 w-80 max-w-[min(20rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-content-border bg-content shadow-[0_18px_40px_rgb(15_18_24_/_28%)]'
 
   const iframe = document.createElement('iframe')
   iframe.src = props.embedUrl
   iframe.title = 'YouTube-Vorschau'
-  iframe.style.cssText = 'aspect-ratio:16/9;height:auto;width:100%;border:0;display:block;'
+  iframe.className = 'aspect-video block h-auto w-full border-0'
   iframe.allow =
     'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
   iframe.allowFullscreen = true

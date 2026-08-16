@@ -32,10 +32,10 @@ function submitImport() {
     :draggable="false"
     @update:visible="emit('close')"
   >
-    <div class="backup-stack">
+    <div class="grid gap-6">
       <section id="backup-export-section">
-        <h4>Export</h4>
-        <p>
+        <h4 class="mb-1.5 font-semibold">Export</h4>
+        <p class="mb-3 text-[0.92rem] text-surface-600">
           Exportiert alle Module, Typen, YouTube-Videos und PDF-Anleitungen als ZIP-Datei.
           Soft-gelöschte Einträge sind nicht enthalten.
         </p>
@@ -48,13 +48,17 @@ function submitImport() {
       </section>
 
       <section id="backup-import-section">
-        <h4>Import</h4>
-        <p>
+        <h4 class="mb-1.5 font-semibold">Import</h4>
+        <p class="mb-3 text-[0.92rem] text-surface-600">
           Stellt ein zuvor erstelltes Backup wieder her.
           <strong>Alle vorhandenen Daten werden dabei ersetzt.</strong>
         </p>
-        <form id="backup-import-form" class="upload-drop" @submit.prevent="submitImport">
-          <p>ZIP hierher ziehen oder Datei auswählen (max. 100 MB)</p>
+        <form
+          id="backup-import-form"
+          class="rounded-[0.85rem] border border-dashed border-content-border bg-drop p-4 text-center"
+          @submit.prevent="submitImport"
+        >
+          <p class="mb-3 text-[0.92rem] text-surface-600">ZIP hierher ziehen oder Datei auswählen (max. 100 MB)</p>
           <FileUpload
             mode="basic"
             accept=".zip,application/zip"
@@ -63,11 +67,11 @@ function submitImport() {
             custom-upload
             @select="onSelect"
           />
-          <div v-if="zipFile" class="file-row">
+          <div v-if="zipFile" class="mt-3 flex items-center justify-start gap-2">
             <span>{{ zipFile.name }}</span>
             <Button type="button" label="Abbrechen" text size="small" @click="zipFile = null" />
           </div>
-          <div class="dialog-actions">
+          <div class="mt-3 flex items-center justify-end gap-2">
             <Button
               id="close-backup-button"
               type="button"
@@ -82,33 +86,3 @@ function submitImport() {
     </div>
   </Dialog>
 </template>
-
-<style scoped>
-.backup-stack {
-  display: grid;
-  gap: 1.5rem;
-}
-
-h4 {
-  margin: 0 0 0.4rem;
-}
-
-p {
-  margin: 0 0 0.75rem;
-  color: var(--p-surface-600);
-  font-size: 0.92rem;
-}
-
-.file-row,
-.dialog-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  margin-top: 0.75rem;
-}
-
-.file-row {
-  justify-content: flex-start;
-}
-</style>

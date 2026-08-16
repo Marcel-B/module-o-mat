@@ -64,46 +64,69 @@ function primaryVideo(module: Module) {
 </script>
 
 <template>
-  <div class="inventory-table-wrap">
+  <div class="overflow-auto rounded-2xl border border-content-border bg-content shadow-[0_18px_40px_-28px_rgb(15_18_24_/_45%)]">
     <ProgressBar v-if="loading" mode="indeterminate" style="height: 3px" />
 
-    <p v-if="!loading && modules.length === 0" id="no-eurorack-modules" class="empty-state">
+    <p v-if="!loading && modules.length === 0" id="no-eurorack-modules" class="px-4 py-10 text-center text-surface-600">
       {{ emptyMessage }}
     </p>
 
-    <table v-else id="eurorack-modules" class="inventory-table">
+    <table v-else id="eurorack-modules" class="w-full table-fixed border-collapse">
       <thead>
         <tr>
-          <th>Modul</th>
-          <th class="col-hp">HP</th>
-          <th class="col-price">Kaufpreis</th>
-          <th class="col-value">Wert</th>
-          <th class="col-actions"></th>
+          <th
+            class="border-b border-content-border px-[0.9rem] py-[0.7rem] text-left align-middle text-[0.78rem] font-semibold tracking-wide uppercase text-surface-600"
+          >
+            Modul
+          </th>
+          <th
+            class="w-14 whitespace-nowrap border-b border-content-border px-[0.9rem] py-[0.7rem] text-left align-middle text-[0.78rem] font-semibold tracking-wide uppercase text-surface-600"
+          >
+            HP
+          </th>
+          <th
+            class="w-[7.5rem] whitespace-nowrap border-b border-content-border px-[0.9rem] py-[0.7rem] text-right align-middle text-[0.78rem] font-semibold tracking-wide uppercase tabular-nums text-surface-600"
+          >
+            Kaufpreis
+          </th>
+          <th
+            class="w-[7.5rem] whitespace-nowrap border-b border-content-border px-[0.9rem] py-[0.7rem] text-right align-middle text-[0.78rem] font-semibold tracking-wide uppercase tabular-nums text-surface-600"
+          >
+            Wert
+          </th>
+          <th
+            class="w-[11.5rem] border-b border-content-border px-[0.9rem] py-[0.7rem] text-left align-middle max-[780px]:w-[8.5rem]"
+          ></th>
         </tr>
       </thead>
 
       <tbody v-for="group in groups" :id="`eurorack-modules-${group.type}`" :key="group.type">
-        <tr class="group-row">
-          <td colspan="5">
+        <tr class="bg-group-row font-semibold">
+          <td class="px-[0.9rem] py-[0.55rem] text-left align-middle" colspan="5">
             {{ group.type }}
-            <span class="group-count">({{ group.modules.length }})</span>
+            <span class="ml-1 font-medium text-surface-600">({{ group.modules.length }})</span>
           </td>
         </tr>
         <tr
           v-for="module in group.modules"
           :id="`eurorack-module-${module.id}`"
           :key="module.id"
+          class="hover:bg-row-hover"
         >
-          <td class="name-cell">{{ module.manufacturer }} - {{ module.name }}</td>
-          <td class="col-hp">{{ module.hp }}</td>
-          <td class="col-price">{{ formatEuro(module.purchase_price) }}</td>
-          <td class="col-value">
+          <td class="overflow-hidden px-[0.9rem] py-[0.7rem] text-left align-middle text-ellipsis whitespace-nowrap">
+            {{ module.manufacturer }} - {{ module.name }}
+          </td>
+          <td class="w-14 whitespace-nowrap px-[0.9rem] py-[0.7rem] text-left align-middle">{{ module.hp }}</td>
+          <td class="w-[7.5rem] whitespace-nowrap px-[0.9rem] py-[0.7rem] text-right align-middle tabular-nums">
+            {{ formatEuro(module.purchase_price) }}
+          </td>
+          <td class="w-[7.5rem] whitespace-nowrap px-[0.9rem] py-[0.7rem] text-right align-middle tabular-nums">
             <span :title="priceRangeTitle(module.price_range)">
               {{ formatEuroRange(module.price_range, module.current_value) }}
             </span>
           </td>
-          <td class="col-actions">
-            <div class="row-actions">
+          <td class="w-[11.5rem] px-[0.9rem] py-[0.7rem] align-middle max-[780px]:w-[8.5rem]">
+            <div class="flex justify-end gap-[0.15rem]">
               <a
                 v-if="module.has_manual"
                 :id="`open-manual-pdf-${module.id}`"
@@ -171,16 +194,28 @@ function primaryVideo(module: Module) {
         </tr>
       </tbody>
 
-      <tfoot v-if="stats" id="inventory-stats">
+      <tfoot v-if="stats" id="inventory-stats" class="font-semibold">
         <tr>
-          <td>
+          <td class="border-t-2 border-content-border px-[0.9rem] py-[0.7rem] text-left align-middle">
             {{ stats.count }} {{ stats.count === 1 ? 'Modul' : 'Module' }}
-            <span class="stats-sub">{{ formatHpWidth(stats) }}</span>
+            <span class="mt-0.5 block text-xs font-medium text-surface-500">{{ formatHpWidth(stats) }}</span>
           </td>
-          <td class="col-hp">{{ stats.total_hp }}</td>
-          <td class="col-price">{{ formatEuro(stats.total_purchase_price) }}</td>
-          <td class="col-value">{{ formatEuro(stats.total_current_value) }}</td>
-          <td></td>
+          <td
+            class="w-14 whitespace-nowrap border-t-2 border-content-border px-[0.9rem] py-[0.7rem] text-left align-middle"
+          >
+            {{ stats.total_hp }}
+          </td>
+          <td
+            class="w-[7.5rem] whitespace-nowrap border-t-2 border-content-border px-[0.9rem] py-[0.7rem] text-right align-middle tabular-nums"
+          >
+            {{ formatEuro(stats.total_purchase_price) }}
+          </td>
+          <td
+            class="w-[7.5rem] whitespace-nowrap border-t-2 border-content-border px-[0.9rem] py-[0.7rem] text-right align-middle tabular-nums"
+          >
+            {{ formatEuro(stats.total_current_value) }}
+          </td>
+          <td class="border-t-2 border-content-border"></td>
         </tr>
       </tfoot>
     </table>

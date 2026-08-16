@@ -29,7 +29,8 @@ const hasData = computed(() => (chartData.value.datasets || []).length > 0)
 function ensureTooltip() {
   if (tooltipEl) return tooltipEl
   tooltipEl = document.createElement('div')
-  tooltipEl.className = 'price-history-tooltip'
+  tooltipEl.className =
+    'fixed z-[80] min-w-36 max-w-64 rounded-[0.7rem] bg-surface-0 px-3 py-2.5 text-surface-900 shadow-[0_12px_30px_rgb(15_18_24_/_22%)] pointer-events-auto opacity-0 transition-opacity duration-150'
   tooltipEl.hidden = true
   document.body.appendChild(tooltipEl)
   return tooltipEl
@@ -61,14 +62,14 @@ function externalTooltip(context: { chart: ChartJS; tooltip: TooltipModel<'line'
       const amount = formatEuro(item.parsed.y)
       const notesHtml = notes
         ? url
-          ? `<a class="price-history-tooltip__link" href="${url}" target="_blank" rel="noopener noreferrer">${notes}</a>`
+          ? `<a class="text-primary break-words" href="${url}" target="_blank" rel="noopener noreferrer">${notes}</a>`
           : `<span>${notes}</span>`
         : ''
-      return `<div class="price-history-tooltip__row">${notesHtml}<div class="price-history-tooltip__amount">${amount}</div></div>`
+      return `<div>${notesHtml}<div class="font-semibold">${amount}</div></div>`
     })
     .join('')
 
-  el.innerHTML = `<div class="price-history-tooltip__title">${titleText}</div>${lines}`
+  el.innerHTML = `<div class="mb-1 text-xs text-surface-500">${titleText}</div><div class="space-y-2">${lines}</div>`
   el.hidden = false
   el.style.opacity = '1'
 
@@ -152,33 +153,15 @@ onBeforeUnmount(() => {
     @update:visible="emit('close')"
   >
     <div id="price-history-content">
-      <div v-if="hasData" id="price-history-chart" class="chart-wrap">
+      <div v-if="hasData" id="price-history-chart" class="relative h-80 w-full">
         <canvas id="price-history-canvas" ref="canvas" aria-label="Preisverlaufsdiagramm" />
       </div>
-      <p v-else id="price-history-empty" class="empty">
+      <p v-else id="price-history-empty" class="text-surface-500">
         Für dieses Modul liegen noch keine Preisbeobachtungen vor.
       </p>
-      <div class="dialog-actions">
+      <div class="flex justify-end pt-4">
         <Button id="close-price-history-button" label="Schließen" @click="emit('close')" />
       </div>
     </div>
   </Dialog>
 </template>
-
-<style scoped>
-.chart-wrap {
-  position: relative;
-  height: 20rem;
-  width: 100%;
-}
-
-.empty {
-  color: var(--p-surface-500);
-}
-
-.dialog-actions {
-  display: flex;
-  justify-content: flex-end;
-  padding-top: 1rem;
-}
-</style>

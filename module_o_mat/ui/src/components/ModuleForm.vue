@@ -148,10 +148,10 @@ const onSubmit = handleSubmit((formValues) => {
 </script>
 
 <template>
-  <form id="eurorack-module-form" class="module-form" @submit.prevent="onSubmit">
-    <div class="form-grid">
+  <form id="eurorack-module-form" class="flex min-h-0 flex-1 flex-col" @submit.prevent="onSubmit">
+    <div class="grid min-h-0 grid-cols-1 gap-x-4 gap-y-4 overflow-auto pr-1 min-[781px]:grid-cols-2">
       <div>
-        <label class="field-label" for="manufacturer">Hersteller</label>
+        <label class="mb-1.5 block text-xs font-semibold text-surface-600" for="manufacturer">Hersteller</label>
         <AutoComplete
           id="manufacturer"
           v-model="manufacturer"
@@ -163,17 +163,17 @@ const onSubmit = handleSubmit((formValues) => {
           fluid
           @complete="searchManufacturer"
         />
-        <small v-if="errors.manufacturer" class="field-error">{{ errors.manufacturer }}</small>
+        <small v-if="errors.manufacturer" class="mt-1.5 block text-sm text-danger">{{ errors.manufacturer }}</small>
       </div>
 
       <div>
-        <label class="field-label" for="name">Name</label>
+        <label class="mb-1.5 block text-xs font-semibold text-surface-600" for="name">Name</label>
         <InputText id="name" v-model="name" v-bind="nameAttrs" :disabled="readonly" fluid />
-        <small v-if="errors.name" class="field-error">{{ errors.name }}</small>
+        <small v-if="errors.name" class="mt-1.5 block text-sm text-danger">{{ errors.name }}</small>
       </div>
 
       <div>
-        <label class="field-label" for="hp">HP</label>
+        <label class="mb-1.5 block text-xs font-semibold text-surface-600" for="hp">HP</label>
         <InputNumber
           v-model="hp"
           v-bind="hpAttrs"
@@ -183,11 +183,11 @@ const onSubmit = handleSubmit((formValues) => {
           :use-grouping="false"
           fluid
         />
-        <small v-if="errors.hp" class="field-error">{{ errors.hp }}</small>
+        <small v-if="errors.hp" class="mt-1.5 block text-sm text-danger">{{ errors.hp }}</small>
       </div>
 
       <div>
-        <label class="field-label" for="purchase_price">Kaufpreis (€)</label>
+        <label class="mb-1.5 block text-xs font-semibold text-surface-600" for="purchase_price">Kaufpreis (€)</label>
         <InputNumber
           v-model="purchasePrice"
           v-bind="purchasePriceAttrs"
@@ -200,11 +200,11 @@ const onSubmit = handleSubmit((formValues) => {
           locale="de-DE"
           fluid
         />
-        <small v-if="errors.purchase_price" class="field-error">{{ errors.purchase_price }}</small>
+        <small v-if="errors.purchase_price" class="mt-1.5 block text-sm text-danger">{{ errors.purchase_price }}</small>
       </div>
 
       <div>
-        <label class="field-label" for="current_value">Wert (€)</label>
+        <label class="mb-1.5 block text-xs font-semibold text-surface-600" for="current_value">Wert (€)</label>
         <InputNumber
           v-model="currentValue"
           v-bind="currentValueAttrs"
@@ -217,11 +217,11 @@ const onSubmit = handleSubmit((formValues) => {
           locale="de-DE"
           fluid
         />
-        <small v-if="errors.current_value" class="field-error">{{ errors.current_value }}</small>
+        <small v-if="errors.current_value" class="mt-1.5 block text-sm text-danger">{{ errors.current_value }}</small>
       </div>
 
       <div>
-        <label class="field-label" for="type">Typ</label>
+        <label class="mb-1.5 block text-xs font-semibold text-surface-600" for="type">Typ</label>
         <Select
           id="type"
           v-model="type"
@@ -233,32 +233,33 @@ const onSubmit = handleSubmit((formValues) => {
           :disabled="readonly"
           fluid
         />
-        <small v-if="errors.type" class="field-error">{{ errors.type }}</small>
+        <small v-if="errors.type" class="mt-1.5 block text-sm text-danger">{{ errors.type }}</small>
       </div>
 
-      <div id="module-subtypes" class="form-span-2">
-        <span class="field-label">Subtypen</span>
+      <div id="module-subtypes" class="col-span-full">
+        <span class="mb-1.5 block text-xs font-semibold text-surface-600">Subtypen</span>
         <template v-if="readonly">
-          <div v-if="(subtypes || []).length" class="subtype-chips">
+          <div v-if="(subtypes || []).length" class="flex flex-wrap gap-1.5">
             <Chip
               v-for="item in subtypes"
               :id="`subtype-chip-${item}`"
               :key="item"
               :label="item"
-              class="subtype-chip-active"
+              class="!bg-primary !text-primary-contrast"
             />
           </div>
-          <p v-else id="module-subtypes-empty" class="empty-hint">Keine Subtypen</p>
+          <p v-else id="module-subtypes-empty" class="text-[0.9rem] text-surface-500">Keine Subtypen</p>
         </template>
         <template v-else>
-          <p v-if="subtypeOptions.length === 0" class="empty-hint">Keine weiteren Typen verfügbar.</p>
-          <div v-else class="subtype-chips">
+          <p v-if="subtypeOptions.length === 0" class="text-[0.9rem] text-surface-500">Keine weiteren Typen verfügbar.</p>
+          <div v-else class="flex flex-wrap gap-1.5">
             <Chip
               v-for="item in subtypeOptions"
               :id="`subtype-chip-${item}`"
               :key="item"
               :label="item"
-              :class="{ 'subtype-chip-active': (subtypes || []).includes(item) }"
+              class="cursor-pointer transition-transform duration-150 hover:-translate-y-px"
+              :class="{ '!bg-primary !text-primary-contrast': (subtypes || []).includes(item) }"
               @click="toggleSubtype(item)"
             />
           </div>
@@ -266,7 +267,7 @@ const onSubmit = handleSubmit((formValues) => {
       </div>
 
       <div>
-        <label class="field-label" for="plus12">Strombedarf +12V (mA)</label>
+        <label class="mb-1.5 block text-xs font-semibold text-surface-600" for="plus12">Strombedarf +12V (mA)</label>
         <InputNumber
           v-model="plus12"
           v-bind="plus12Attrs"
@@ -276,13 +277,13 @@ const onSubmit = handleSubmit((formValues) => {
           :use-grouping="false"
           fluid
         />
-        <small v-if="errors.current_draw_plus12v_ma" class="field-error">
+        <small v-if="errors.current_draw_plus12v_ma" class="mt-1.5 block text-sm text-danger">
           {{ errors.current_draw_plus12v_ma }}
         </small>
       </div>
 
       <div>
-        <label class="field-label" for="minus12">Strombedarf -12V (mA)</label>
+        <label class="mb-1.5 block text-xs font-semibold text-surface-600" for="minus12">Strombedarf -12V (mA)</label>
         <InputNumber
           v-model="minus12"
           v-bind="minus12Attrs"
@@ -292,13 +293,13 @@ const onSubmit = handleSubmit((formValues) => {
           :use-grouping="false"
           fluid
         />
-        <small v-if="errors.current_draw_minus12v_ma" class="field-error">
+        <small v-if="errors.current_draw_minus12v_ma" class="mt-1.5 block text-sm text-danger">
           {{ errors.current_draw_minus12v_ma }}
         </small>
       </div>
 
       <div>
-        <label class="field-label" for="plus5">Strombedarf +5V (mA)</label>
+        <label class="mb-1.5 block text-xs font-semibold text-surface-600" for="plus5">Strombedarf +5V (mA)</label>
         <InputNumber
           v-model="plus5"
           v-bind="plus5Attrs"
@@ -308,13 +309,13 @@ const onSubmit = handleSubmit((formValues) => {
           :use-grouping="false"
           fluid
         />
-        <small v-if="errors.current_draw_plus5v_ma" class="field-error">
+        <small v-if="errors.current_draw_plus5v_ma" class="mt-1.5 block text-sm text-danger">
           {{ errors.current_draw_plus5v_ma }}
         </small>
       </div>
 
       <div>
-        <label class="field-label" for="depth">Tiefe (mm)</label>
+        <label class="mb-1.5 block text-xs font-semibold text-surface-600" for="depth">Tiefe (mm)</label>
         <InputNumber
           v-model="depth"
           v-bind="depthAttrs"
@@ -324,11 +325,11 @@ const onSubmit = handleSubmit((formValues) => {
           :use-grouping="false"
           fluid
         />
-        <small v-if="errors.depth_mm" class="field-error">{{ errors.depth_mm }}</small>
+        <small v-if="errors.depth_mm" class="mt-1.5 block text-sm text-danger">{{ errors.depth_mm }}</small>
       </div>
 
-      <div class="form-span-2">
-        <label class="field-label" for="description">Beschreibung</label>
+      <div class="col-span-full">
+        <label class="mb-1.5 block text-xs font-semibold text-surface-600" for="description">Beschreibung</label>
         <Textarea
           id="description"
           v-model="description"
@@ -340,13 +341,13 @@ const onSubmit = handleSubmit((formValues) => {
         />
       </div>
 
-      <div class="form-span-2">
-        <label class="field-label" for="manual_url">Produktseite (URL)</label>
+      <div class="col-span-full">
+        <label class="mb-1.5 block text-xs font-semibold text-surface-600" for="manual_url">Produktseite (URL)</label>
         <a
           v-if="readonly"
           id="manual-url-link"
           :href="manualUrl || undefined"
-          class="product-link"
+          class="break-all text-primary"
           target="_blank"
           rel="noopener noreferrer"
         >
@@ -361,12 +362,12 @@ const onSubmit = handleSubmit((formValues) => {
         />
       </div>
 
-      <div id="manual-pdf-fields" class="form-span-2">
-        <span class="field-label">PDF-Anleitung</span>
-        <div v-if="existingManual" id="manual-pdf-current" class="manual-current">
+      <div id="manual-pdf-fields" class="col-span-full">
+        <span class="mb-1.5 block text-xs font-semibold text-surface-600">PDF-Anleitung</span>
+        <div v-if="existingManual" id="manual-pdf-current" class="mt-2 flex items-center gap-1.5">
           <span>
             {{ existingManual.filename }}
-            <span v-if="existingManual.size" class="muted">({{ formatBytes(existingManual.size) }})</span>
+            <span v-if="existingManual.size" class="text-[0.9rem] text-surface-500">({{ formatBytes(existingManual.size) }})</span>
           </span>
           <a
             v-if="existingManual.id && mode !== 'duplicate'"
@@ -389,10 +390,14 @@ const onSubmit = handleSubmit((formValues) => {
             @click="removeManual"
           />
         </div>
-        <span v-else-if="readonly" class="muted">Keine Anleitung hinterlegt.</span>
+        <span v-else-if="readonly" class="text-[0.9rem] text-surface-500">Keine Anleitung hinterlegt.</span>
 
-        <div v-if="!readonly" id="manual-pdf-upload" class="upload-drop">
-          <p class="muted">PDF hierher ziehen oder Datei auswählen (max. 20 MB)</p>
+        <div
+          v-if="!readonly"
+          id="manual-pdf-upload"
+          class="rounded-[0.85rem] border border-dashed border-content-border bg-drop p-4 text-center"
+        >
+          <p class="text-[0.9rem] text-surface-500">PDF hierher ziehen oder Datei auswählen (max. 20 MB)</p>
           <FileUpload
             mode="basic"
             accept="application/pdf,.pdf"
@@ -401,38 +406,38 @@ const onSubmit = handleSubmit((formValues) => {
             custom-upload
             @select="onPdfSelect"
           />
-          <div v-if="pdfFile" class="manual-current">
+          <div v-if="pdfFile" class="mt-2 flex items-center gap-1.5">
             <span>{{ pdfFile.name }} ({{ formatBytes(pdfFile.size) }})</span>
             <Button type="button" label="Abbrechen" text size="small" @click="clearPdf" />
           </div>
         </div>
       </div>
 
-      <div id="youtube-video-fields" class="form-span-2">
-        <span class="field-label">YouTube-Videos</span>
+      <div id="youtube-video-fields" class="col-span-full">
+        <span class="mb-1.5 block text-xs font-semibold text-surface-600">YouTube-Videos</span>
         <div v-if="readonly" id="youtube-videos-show">
           <a
             v-for="(video, index) in youtubeVideos"
             :id="`youtube-video-link-${index}`"
             :key="`${video.url}-${index}`"
             :href="video.url"
-            class="product-link"
+            class="break-all text-primary"
             target="_blank"
             rel="noopener noreferrer"
           >
             {{ video.url }}
           </a>
-          <span v-if="!youtubeVideos?.length" class="muted">Keine Videos hinterlegt.</span>
+          <span v-if="!youtubeVideos?.length" class="text-[0.9rem] text-surface-500">Keine Videos hinterlegt.</span>
         </div>
         <div v-else id="youtube-videos-edit">
           <div
             v-for="(video, index) in youtubeVideos"
             :id="`youtube-video-row-${index}`"
             :key="index"
-            class="youtube-row"
+            class="flex items-start gap-2"
           >
-            <div class="grow">
-              <label class="field-label" :for="`youtube-${index}`">Video {{ index + 1 }}</label>
+            <div class="min-w-0 flex-1">
+              <label class="mb-1.5 block text-xs font-semibold text-surface-600" :for="`youtube-${index}`">Video {{ index + 1 }}</label>
               <InputText
                 :id="`youtube-${index}`"
                 :model-value="video.url"
@@ -440,11 +445,11 @@ const onSubmit = handleSubmit((formValues) => {
                 fluid
                 @update:model-value="updateYoutubeUrl(index, $event)"
               />
-              <small v-if="errors[`youtube_videos[${index}].url`]" class="field-error">
+              <small v-if="errors[`youtube_videos[${index}].url`]" class="mt-1.5 block text-sm text-danger">
                 {{ errors[`youtube_videos[${index}].url`] }}
               </small>
             </div>
-            <div class="youtube-actions">
+            <div class="mt-[1.7rem] flex items-center gap-1.5">
               <Button
                 :id="`move-youtube-video-up-${index}`"
                 type="button"
@@ -490,7 +495,7 @@ const onSubmit = handleSubmit((formValues) => {
       </div>
     </div>
 
-    <div class="dialog-actions">
+    <div class="flex justify-end gap-2 pt-4">
       <Button
         :id="readonly ? 'close-eurorack-module-button' : 'cancel-eurorack-module-button'"
         type="button"
@@ -508,67 +513,3 @@ const onSubmit = handleSubmit((formValues) => {
     </div>
   </form>
 </template>
-
-<style scoped>
-.module-form {
-  display: flex;
-  min-height: 0;
-  flex: 1;
-  flex-direction: column;
-}
-
-.form-grid {
-  min-height: 0;
-  overflow: auto;
-  padding-right: 0.25rem;
-}
-
-.dialog-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  padding-top: 1rem;
-}
-
-.muted,
-.empty-hint {
-  color: var(--p-surface-500);
-  font-size: 0.9rem;
-}
-
-.product-link {
-  color: var(--p-primary-color);
-  word-break: break-all;
-}
-
-.manual-current,
-.youtube-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin-top: 0.5rem;
-}
-
-.grow {
-  min-width: 0;
-  flex: 1;
-}
-
-.youtube-actions {
-  margin-top: 1.7rem;
-}
-
-.subtype-chip-active {
-  background: var(--p-primary-color) !important;
-  color: var(--p-primary-contrast-color) !important;
-}
-
-.subtype-chips :deep(.p-chip) {
-  cursor: pointer;
-  transition: transform 120ms ease, background 120ms ease;
-}
-
-.subtype-chips :deep(.p-chip:hover) {
-  transform: translateY(-1px);
-}
-</style>
