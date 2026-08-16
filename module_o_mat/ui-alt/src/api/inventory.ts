@@ -1,6 +1,7 @@
 import type {
   BackupImportResponse,
   ManufacturersResponse,
+  MaintenanceStatus,
   ModuleFilters,
   ModuleListResponse,
   ModulePayload,
@@ -101,4 +102,8 @@ export function importBackup(file: File): Promise<BackupImportResponse> {
   const body = new FormData()
   body.append('file', file)
   return request<BackupImportResponse>('/backup/import', { method: 'POST', body })
+}
+
+export function getMaintenance(): Promise<MaintenanceStatus> {
+  return request<MaintenanceStatus>('/maintenance')
 }

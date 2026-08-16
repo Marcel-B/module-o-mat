@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { ApiError, jsonBody, request } from './client'
+import { ApiError, MAINTENANCE_EVENT, jsonBody, request } from './client'
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -66,5 +66,27 @@ describe('request', () => {
     await request('/modules/1/manual', { method: 'PUT', body })
 
     expect(fetchMock.mock.calls[0]?.[1]?.headers).toEqual({})
+  })
+
+  it('meldet 503 als Wartungsmodus', async () => {
+    const listener = vi.fn()
+    window.addEventListener(MAINTENANCE_EVENT, listener)
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 503,
+        headers: new Headers({ 'content-type': 'application/json' }),
+        json: async () => ({ error: 'Datensicherung laeuft' }),
+      }),
+    )
+
+    const error = await request('/modules').catch((caught) => caught)
+
+    expect(error).toBeInstanceOf(ApiError)
+    expect(error.status).toBe(503)
+    expect(listener).toHaveBeenCalled()
+    window.removeEventListener(MAINTENANCE_EVENT, listener)
   })
 })

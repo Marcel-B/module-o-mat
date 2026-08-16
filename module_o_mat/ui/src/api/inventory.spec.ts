@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createModule, listModules } from './inventory'
+import { createModule, getMaintenance, listModules } from './inventory'
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -67,5 +67,15 @@ describe('createModule', () => {
         body: expect.stringContaining('"name":"Maths"'),
       }),
     )
+  })
+})
+
+describe('getMaintenance', () => {
+  it('fragt den Wartungsstatus ab', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ maintenance: true }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(getMaintenance()).resolves.toEqual({ maintenance: true })
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/maintenance', expect.any(Object))
   })
 })

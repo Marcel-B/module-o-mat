@@ -12,6 +12,8 @@ export class ApiError extends Error {
   }
 }
 
+export const MAINTENANCE_EVENT = 'module-o-mat:maintenance'
+
 function filenameFromDisposition(header: string | null, fallback: string): string {
   if (!header) return fallback
   const utfMatch = header.match(/filename\*=UTF-8''([^;]+)/i)
@@ -47,6 +49,10 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
   const data = await parseBody(response)
 
   if (!response.ok) {
+    if (response.status === 503 && typeof window !== 'undefined') {
+      window.dispatchEvent(new Event(MAINTENANCE_EVENT))
+    }
+
     const errorBody = (data ?? {}) as ApiErrorBody
     const message = errorBody.error || `Anfrage fehlgeschlagen (${response.status})`
     throw new ApiError(message, errorBody.details || null, response.status)

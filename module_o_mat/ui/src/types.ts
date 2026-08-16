@@ -144,6 +144,10 @@ export type BackupImportResponse = {
   imported: boolean
 }
 
+export type MaintenanceStatus = {
+  maintenance: boolean
+}
+
 export type ApiErrorBody = {
   error?: string
   details?: Record<string, string[] | string> | null

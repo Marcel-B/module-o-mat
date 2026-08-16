@@ -291,6 +291,50 @@ body {
   gap: 0.15rem;
 }
 
+.maintenance-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: color-mix(in srgb, var(--p-surface-900) 42%, transparent);
+  backdrop-filter: blur(14px);
+}
+
+.maintenance-card {
+  display: grid;
+  justify-items: center;
+  gap: 0.85rem;
+  max-width: 26rem;
+  padding: 2.25rem 2rem;
+  text-align: center;
+  border-radius: 1.25rem;
+  border: 1px solid color-mix(in srgb, var(--p-surface-0) 18%, transparent);
+  background: color-mix(in srgb, var(--p-surface-0) 92%, transparent);
+  box-shadow: 0 24px 60px rgb(15 18 24 / 28%);
+}
+
+.maintenance-card h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.maintenance-card p {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--p-surface-600);
+}
+
+.p-dark .maintenance-card {
+  background: color-mix(in srgb, #161b24 92%, transparent);
+  border-color: color-mix(in srgb, var(--p-surface-0) 10%, transparent);
+}
+
 @media (max-width: 780px) {
   .filter-row,
   .form-grid {

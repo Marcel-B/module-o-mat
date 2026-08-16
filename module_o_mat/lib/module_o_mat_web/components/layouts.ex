@@ -33,6 +33,10 @@ defmodule ModuleOMatWeb.Layouts do
 
   attr :wide, :boolean, default: false, doc: "use a wider content column"
 
+  attr :maintenance?, :boolean,
+    default: false,
+    doc: "full-screen overlay while a remote backup is running"
+
   slot :inner_block, required: true
 
   def app(assigns) do
@@ -59,6 +63,26 @@ defmodule ModuleOMatWeb.Layouts do
     </main>
 
     <.flash_group flash={@flash} />
+
+    <div
+      :if={@maintenance?}
+      id="maintenance-overlay"
+      class="fixed inset-0 z-[200] flex items-center justify-center bg-base-300/75 backdrop-blur-md"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="maintenance-overlay-title"
+    >
+      <div class="mx-6 max-w-md rounded-2xl border border-base-300 bg-base-100 px-8 py-10 text-center shadow-2xl">
+        <.icon name="hero-arrow-path" class="mx-auto size-10 animate-spin text-primary" />
+        <h2 id="maintenance-overlay-title" class="mt-4 text-xl font-semibold tracking-tight">
+          Datensicherung läuft
+        </h2>
+        <p class="mt-2 text-sm leading-relaxed text-base-content/70">
+          Bitte warte einen Moment. Änderungen sind während der Sicherung gesperrt,
+          damit der Bestand konsistent bleibt.
+        </p>
+      </div>
+    </div>
     """
   end
 

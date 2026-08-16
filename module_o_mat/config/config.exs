@@ -11,7 +11,11 @@ config :module_o_mat, ModuleOMat.Inventory.RemoteBackup,
   enabled: false,
   ensure_collection: true,
   at: {3, 0},
-  timezone: "Europe/Berlin"
+  timezone: "Europe/Berlin",
+  idle_after_ms: 600_000,
+  maintenance_grace_ms: 2_000,
+  receive_timeout: 300_000,
+  timeout_ms: 1_200_000
 
 # Configure the endpoint
 config :module_o_mat, ModuleOMatWeb.Endpoint,
