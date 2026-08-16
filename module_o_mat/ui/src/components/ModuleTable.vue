@@ -140,7 +140,7 @@ const toggle = (event: Event, data: Module) => {
     scroll-height="calc(100vh - 20rem)"
     :global-filter-fields="['type', 'subtypesText', 'manufacturer', 'name', 'hp']"
     group-rows-by="type"
-    class="text-sm"
+    class="overflow-hidden rounded-2xl border border-content-border bg-content text-sm"
     responsive-layout="scroll"
   >
   <template #header>

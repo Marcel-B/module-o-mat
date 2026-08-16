@@ -25,9 +25,9 @@
   --color-group-row: color-mix(in srgb, var(--p-primary-color) 16%, var(--p-content-background));
   --color-chip-used: color-mix(in srgb, var(--p-primary-color) 18%, transparent);
   --color-drop: color-mix(in srgb, var(--p-surface-100) 70%, transparent);
-  --color-overlay: color-mix(in srgb, var(--p-surface-900) 42%, transparent);
+  --color-overlay: color-mix(in srgb, #0b0d12 55%, transparent);
   --color-card: color-mix(in srgb, var(--p-surface-0) 92%, transparent);
   --color-card-border: color-mix(in srgb, var(--p-surface-0) 18%, transparent);
-  --color-card-dark: color-mix(in srgb, #161b24 92%, transparent);
-  --color-card-border-dark: color-mix(in srgb, var(--p-surface-0) 10%, transparent);
+  --color-card-dark: color-mix(in srgb, #11141c 92%, transparent);
+  --color-card-border-dark: color-mix(in srgb, var(--p-surface-300) 35%, transparent);
 }
