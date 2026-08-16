@@ -31,6 +31,9 @@ module_o_mat-*.tar
 # Ignore assets that are produced by build tools.
 /priv/static/assets/
 
+# Vue production builds copied here by mix assets.build_vue / Docker.
+/priv/vue/
+
 # Ignore user-uploaded PDF manuals.
 /priv/static/uploads/
 

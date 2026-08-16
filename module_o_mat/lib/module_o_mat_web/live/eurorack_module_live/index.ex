@@ -341,7 +341,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
          |> assign(:manufacturers, Inventory.list_manufacturers())
          |> assign(:types, available_types())
          |> put_flash(:info, "Backup wurde importiert. Alle bisherigen Daten wurden ersetzt.")
-         |> push_patch(to: ~p"/")}
+         |> push_patch(to: ~p"/live")}
 
       [{:error, reason}] ->
         {:noreply, put_flash(socket, :error, "Import fehlgeschlagen: #{reason}")}
@@ -493,7 +493,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.Index do
           )
       end
 
-    push_patch(socket, to: ~p"/")
+    push_patch(socket, to: ~p"/live")
   end
 
   defp maybe_attach_manual(socket, eurorack_module) do

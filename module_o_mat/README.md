@@ -33,7 +33,11 @@ mix phx.server
 ```
 
 Die Oberfläche ist danach unter [http://localhost:4000](http://localhost:4000)
-erreichbar.
+erreichbar. Die Landing-Page lässt zwischen drei UIs wählen:
+
+- [LiveView](http://localhost:4000/live)
+- [Vue UI](http://localhost:4000/ui) (nach `mix assets.build_vue` bzw. im Docker-Image)
+- [Vue UI-Alt](http://localhost:4000/ui-alt)
 
 ## Vue-UIs
 
@@ -47,7 +51,14 @@ an; Vite proxied in der Entwicklung nach `http://localhost:4000`.
   Start: `cd ui-alt && npm install && npm run dev` →
   [http://localhost:5174](http://localhost:5174)
 
-Phoenix (`mix phx.server`) muss parallel laufen.
+Für die Auslieferung durch Phoenix (Landing-Page-Links `/ui` und `/ui-alt`):
+
+```bash
+mix assets.build_vue
+```
+
+Im Docker-Image werden beide Vue-Apps automatisch mitgebaut. Phoenix (`mix phx.server`)
+muss für die Vite-Entwicklung parallel laufen.
 
 ## HTTP-API
 
@@ -88,6 +99,12 @@ Unverändert schmales Payload, siehe
 
 ```bash
 mix test
+```
+
+Die Vue-UI hat eigene Tests:
+
+```bash
+cd ui && npm test
 ```
 
 ## Deploy mit Docker / Podman

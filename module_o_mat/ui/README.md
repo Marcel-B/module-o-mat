@@ -13,6 +13,14 @@ npm run dev
 ```
 
 Die App liegt unter [http://localhost:5173](http://localhost:5173). Vite proxied `/api` nach `http://localhost:4000`.
+Über die Phoenix-Landing-Page ist der Produktions-Build unter
+[http://localhost:4000/ui](http://localhost:4000/ui) erreichbar (`mix assets.build_vue`).
+
+## Tests
+
+```bash
+npm test
+```
 
 ## Funktionen
 

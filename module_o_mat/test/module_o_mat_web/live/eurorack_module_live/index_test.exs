@@ -7,7 +7,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
 
   describe "Uebersicht" do
     test "zeigt einen Hinweis an, wenn noch keine Module erfasst sind", %{conn: conn} do
-      {:ok, _view, html} = live(conn, ~p"/")
+      {:ok, _view, html} = live(conn, ~p"/live")
 
       assert html =~ "Es sind noch keine Module erfasst."
     end
@@ -19,7 +19,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
       eurorack_module_fixture(%{manufacturer: "Mutable Instruments", name: "Plaits", type: "VCO"})
       sto = eurorack_module_fixture(%{manufacturer: "Make Noise", name: "STO", type: "VCO"})
 
-      {:ok, view, _html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/live")
 
       assert has_element?(view, "#eurorack-modules-Envelope")
       assert has_element?(view, "#eurorack-modules-VCO")
@@ -39,7 +39,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
     end
 
     test "zeigt Filterfelder an", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/live")
 
       assert has_element?(view, "#module-filter-form")
       assert has_element?(view, "#module-search-input")
@@ -70,7 +70,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
           current_value: "180.00"
         })
 
-      {:ok, view, _html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/live")
 
       assert has_element?(view, "#eurorack-module-#{maths.id}", "100,00 €")
       assert has_element?(view, "#eurorack-module-#{maths.id}", "120,50 €")
@@ -96,7 +96,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
           %{amount: "210.00", source: "shop"}
         ])
 
-      {:ok, view, _html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/live")
 
       assert has_element?(view, "#eurorack-module-#{module.id}", "150,00–210,00 €")
     end
@@ -122,7 +122,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
           %{amount: "180.00", source: "ebay_sold", observed_on: ~D[2026-08-05]}
         ])
 
-      {:ok, view, _html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/live")
 
       assert has_element?(view, "#price-history-eurorack-module-#{module.id}")
 
@@ -190,7 +190,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
         current_value: "180.00"
       })
 
-      {:ok, view, _html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/live")
 
       view
       |> form("#module-filter-form", %{"type" => "VCO"})
@@ -206,7 +206,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
       eurorack_module_fixture(%{type: "VCO"})
       eurorack_module_fixture(%{type: "Envelope"})
 
-      {:ok, view, _html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/live")
 
       assert has_element?(view, "#module-type-filter option", "VCO")
       assert has_element?(view, "#module-type-filter option", "Envelope")
@@ -224,7 +224,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
           type: "VCO"
         })
 
-      {:ok, view, _html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/live")
 
       view
       |> form("#module-filter-form", %{"q" => "Make"})
@@ -256,7 +256,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
           type: "Sequencer"
         })
 
-      {:ok, view, _html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/live")
 
       view
       |> form("#module-filter-form", %{"q" => "Erica", "type" => "Sequencer"})
@@ -278,7 +278,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
 
       envelope = eurorack_module_fixture(%{type: "Envelope"})
 
-      {:ok, view, _html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/live")
 
       assert has_element?(view, "#module-type-filter option", "LFO")
 
@@ -295,7 +295,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
       mid = eurorack_module_fixture(%{name: "Mid", hp: 8})
       wide = eurorack_module_fixture(%{name: "Wide", hp: 16})
 
-      {:ok, view, _html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/live")
 
       view
       |> form("#module-filter-form", %{"min_hp" => "6", "max_hp" => "12"})
@@ -316,7 +316,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
           type: "VCO"
         })
 
-      {:ok, view, _html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/live")
 
       view
       |> form("#module-filter-form", %{"q" => "Make"})
@@ -335,7 +335,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
     test "zeigt einen Hinweis an, wenn die Suche keine Treffer liefert", %{conn: conn} do
       eurorack_module_fixture(%{manufacturer: "Make Noise", name: "Maths"})
 
-      {:ok, view, _html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/live")
 
       view
       |> form("#module-filter-form", %{"q" => "xyz-nicht-vorhanden"})
@@ -348,7 +348,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
 
   describe "Neues Modul anlegen" do
     test "oeffnet den Dialog beim Klick auf 'Neues Modul'", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/live")
 
       refute has_element?(view, "#eurorack-module-modal")
 
@@ -394,7 +394,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
         |> form("#eurorack-module-form", eurorack_module: attrs)
         |> render_submit()
 
-      assert_patch(view, ~p"/")
+      assert_patch(view, ~p"/live")
       refute has_element?(view, "#eurorack-module-modal")
       assert html =~ "wurde gespeichert"
 
@@ -480,7 +480,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
       |> form("#eurorack-module-form")
       |> render_submit()
 
-      assert_patch(view, ~p"/")
+      assert_patch(view, ~p"/live")
       assert [eurorack_module] = Inventory.list_eurorack_modules()
       assert eurorack_module.type == "VCO"
       assert eurorack_module.subtypes == ["LFO"]
@@ -525,7 +525,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
       |> element("#cancel-eurorack-module-button")
       |> render_click()
 
-      assert_patch(view, ~p"/")
+      assert_patch(view, ~p"/live")
       refute has_element?(view, "#eurorack-module-modal")
       assert Inventory.list_eurorack_modules() == []
     end
@@ -542,7 +542,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
           manual_url: "https://www.makenoisemusic.com/technology/maths"
         })
 
-      {:ok, view, _html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/live")
 
       view
       |> element("#show-eurorack-module-#{eurorack_module.id}")
@@ -586,7 +586,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
       |> element("#close-eurorack-module-button")
       |> render_click()
 
-      assert_patch(view, ~p"/")
+      assert_patch(view, ~p"/live")
       refute has_element?(view, "#eurorack-module-modal")
     end
   end
@@ -598,7 +598,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
       eurorack_module =
         eurorack_module_fixture(%{manufacturer: "Make Noise", name: "Maths"})
 
-      {:ok, view, _html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/live")
 
       view
       |> element("#edit-eurorack-module-#{eurorack_module.id}")
@@ -645,7 +645,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
         |> form("#eurorack-module-form", eurorack_module: %{name: "Maths (aktualisiert)"})
         |> render_submit()
 
-      assert_patch(view, ~p"/")
+      assert_patch(view, ~p"/live")
       refute has_element?(view, "#eurorack-module-modal")
       assert html =~ "wurde aktualisiert"
 
@@ -662,7 +662,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
       |> element("#cancel-eurorack-module-button")
       |> render_click()
 
-      assert_patch(view, ~p"/")
+      assert_patch(view, ~p"/live")
       refute has_element?(view, "#eurorack-module-modal")
       assert Inventory.get_eurorack_module!(eurorack_module.id).name == eurorack_module.name
     end
@@ -672,7 +672,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
     test "buendelt Preisverlauf, Bearbeiten, Duplizieren und Loeschen im Menue", %{conn: conn} do
       eurorack_module = eurorack_module_fixture()
 
-      {:ok, view, _html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/live")
 
       assert has_element?(view, "#actions-menu-eurorack-module-#{eurorack_module.id}")
       assert has_element?(view, "#price-history-eurorack-module-#{eurorack_module.id}")
@@ -696,7 +696,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
           youtube_videos: [%{url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ"}]
         })
 
-      {:ok, view, _html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/live")
 
       view
       |> element("#duplicate-eurorack-module-#{eurorack_module.id}")
@@ -739,7 +739,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
         |> form("#eurorack-module-form", eurorack_module: %{purchase_price: "199.00"})
         |> render_submit()
 
-      assert_patch(view, ~p"/")
+      assert_patch(view, ~p"/live")
       refute has_element?(view, "#eurorack-module-modal")
       assert html =~ "wurde gespeichert"
 
@@ -773,7 +773,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
     test "zeigt eine Sicherheitsabfrage beim Klick auf 'Loeschen' an", %{conn: conn} do
       eurorack_module = eurorack_module_fixture(%{name: "Maths"})
 
-      {:ok, view, _html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/live")
 
       refute has_element?(view, "#delete-eurorack-module-modal")
 
@@ -790,7 +790,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
     test "bricht das Loeschen ueber 'Abbrechen' ab, ohne das Modul zu entfernen", %{conn: conn} do
       eurorack_module = eurorack_module_fixture()
 
-      {:ok, view, _html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/live")
 
       view
       |> element("#delete-eurorack-module-#{eurorack_module.id}")
@@ -811,7 +811,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
          %{conn: conn} do
       eurorack_module = eurorack_module_fixture(%{name: "Maths"})
 
-      {:ok, view, _html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/live")
 
       view
       |> element("#delete-eurorack-module-#{eurorack_module.id}")
@@ -835,7 +835,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
     test "oeffnet den Dialog beim Klick auf 'Typen verwalten' und zeigt vorhandene Typen an", %{
       conn: conn
     } do
-      {:ok, view, _html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/live")
 
       refute has_element?(view, "#module-types-modal")
 
@@ -918,7 +918,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
       |> element("#close-module-types-button")
       |> render_click()
 
-      assert_patch(view, ~p"/")
+      assert_patch(view, ~p"/live")
       refute has_element?(view, "#module-types-modal")
     end
 
@@ -1015,7 +1015,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
                  size: File.stat!(@fixture).size
                })
 
-      {:ok, view, _html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/live")
 
       assert has_element?(view, "#open-manual-pdf-#{without.id}[disabled]")
       assert has_element?(view, "#open-manual-pdf-#{with_manual.id}")
@@ -1047,7 +1047,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
       )
       |> render_submit()
 
-      assert_patch(view, ~p"/")
+      assert_patch(view, ~p"/live")
 
       assert [eurorack_module] = Inventory.list_eurorack_modules()
       assert eurorack_module.manual_pdf_filename == "maths.pdf"
@@ -1103,7 +1103,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
     test "zeigt den Play-Button disabled ohne Videos", %{conn: conn} do
       eurorack_module = eurorack_module_fixture()
 
-      {:ok, view, _html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/live")
 
       assert has_element?(view, "#open-youtube-#{eurorack_module.id}[disabled]")
     end
@@ -1117,7 +1117,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
           ]
         })
 
-      {:ok, view, _html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/live")
 
       assert has_element?(
                view,
@@ -1178,7 +1178,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
       )
       |> render_submit()
 
-      assert_patch(view, ~p"/")
+      assert_patch(view, ~p"/live")
 
       assert [eurorack_module] = Inventory.list_eurorack_modules()
 
@@ -1210,7 +1210,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
 
   describe "Datensicherung" do
     test "oeffnet den Dialog beim Klick auf 'Datensicherung'", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/")
+      {:ok, view, _html} = live(conn, ~p"/live")
 
       refute has_element?(view, "#backup-modal")
 
@@ -1264,7 +1264,7 @@ defmodule ModuleOMatWeb.EurorackModuleLive.IndexTest do
       |> form("#backup-import-form")
       |> render_submit()
 
-      assert_patch(view, ~p"/")
+      assert_patch(view, ~p"/live")
       assert render(view) =~ "Backup wurde importiert"
       assert Inventory.get_eurorack_module!(kept.id).name == "Module A"
       assert Enum.map(Inventory.list_eurorack_modules(), & &1.name) == ["Module A"]
