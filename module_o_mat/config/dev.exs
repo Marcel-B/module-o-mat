@@ -50,6 +50,9 @@ config :module_o_mat, ModuleOMatWeb.Endpoint,
 # Enable dev routes for dashboard and mailbox
 config :module_o_mat, dev_routes: true
 
+# Keep the OpenAPI spec fresh while controllers change.
+config :open_api_spex, :cache_adapter, OpenApiSpex.Plug.NoneCache
+
 # Do not include metadata nor timestamps in development logs
 config :logger, :default_formatter, format: "[$level] $message\n"
 

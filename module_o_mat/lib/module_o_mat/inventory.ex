@@ -358,6 +358,60 @@ defmodule ModuleOMat.Inventory do
   end
 
   @doc """
+  Liefert ein aktives (nicht soft-geloeschtes) Eurorack-Modul oder `nil`.
+
+  Optionen:
+
+    * `:price_observations` – wenn `true`, werden Preisbeobachtungen
+      (neueste zuerst) mitgeladen
+  """
+  def get_active_eurorack_module(id, opts \\ []) do
+    query =
+      EurorackModule
+      |> where([m], is_nil(m.deleted_at))
+      |> preload(youtube_videos: ^from(v in YoutubeVideo, order_by: [asc: v.position]))
+
+    query =
+      if Keyword.get(opts, :price_observations, false) do
+        preload(
+          query,
+          price_observations:
+            ^from(o in ModulePriceObservation, order_by: [desc: o.observed_on, desc: o.id])
+        )
+      else
+        query
+      end
+
+    Repo.get(query, id)
+  end
+
+  @doc """
+  Wie `get_active_eurorack_module/2`, wirft aber `Ecto.NoResultsError`,
+  wenn das Modul fehlt oder soft-geloescht ist.
+  """
+  def get_active_eurorack_module!(id, opts \\ []) do
+    case get_active_eurorack_module(id, opts) do
+      nil -> raise Ecto.NoResultsError, queryable: EurorackModule
+      module -> module
+    end
+  end
+
+  @doc """
+  Liefert einen Modultyp anhand der ID oder `nil`.
+  """
+  def get_module_type(id) do
+    Repo.get(ModuleType, id)
+  end
+
+  @doc """
+  Liefert einen Modultyp anhand der ID. Wirft `Ecto.NoResultsError`, falls
+  keiner existiert.
+  """
+  def get_module_type!(id) do
+    Repo.get!(ModuleType, id)
+  end
+
+  @doc """
   Liefert das erste YouTube-Video eines Moduls (niedrigste `position`) oder
   `nil`, wenn keines hinterlegt ist.
   """

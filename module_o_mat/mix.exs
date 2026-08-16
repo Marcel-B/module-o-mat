@@ -75,6 +75,7 @@ defmodule ModuleOMat.MixProject do
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
       {:jason, "~> 1.2"},
+      {:open_api_spex, "~> 3.22"},
       {:nimble_csv, "~> 1.2"},
       {:req, "~> 0.5"},
       {:tzdata, "~> 1.1"},
