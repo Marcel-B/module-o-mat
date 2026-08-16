@@ -11,6 +11,7 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    ActionMenu: typeof import('./src/components/ActionMenu.vue')['default']
     AppHeader: typeof import('./src/components/AppHeader.vue')['default']
     AutoComplete: typeof import('primevue/autocomplete')['default']
     BackupDialog: typeof import('./src/components/BackupDialog.vue')['default']

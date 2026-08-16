@@ -196,17 +196,6 @@ async function onImportBackup(file: File | null) {
 </script>
 
 <template>
-  <div class="mb-5 flex items-end gap-4">
-      <Button id="backup-button" label="Datensicherung" severity="secondary" @click="router.push('/backup')" />
-      <Button
-        id="manage-module-types-button"
-        label="Typen verwalten"
-        severity="secondary"
-        @click="router.push('/types')"
-      />
-      <Button id="new-eurorack-module-button" label="Neues Modul" @click="router.push('/modules/new')" />
-  </div>
-
   <ModuleTable
     :modules="modules"
     :groups="groupedModules"
