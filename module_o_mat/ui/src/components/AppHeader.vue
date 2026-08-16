@@ -8,11 +8,12 @@ const THEME_KEY = "module-o-mat:theme";
 const stored = localStorage.getItem(THEME_KEY);
 const theme = ref<ThemePreference>(stored === "light" || stored === "dark" || stored === "system" ? stored : "system");
 const logoSrc = `${import.meta.env.BASE_URL}logo.svg`;
-const glitching = ref(false);
-const hardGlitch = ref(false);
+const brandGlitching = ref(false);
+const brandHardGlitch = ref(false);
+const themeGlitching = ref(false);
+const themeHardGlitch = ref(false);
 
-let waitTimer = 0;
-let burstTimer = 0;
+const timers: number[] = [];
 
 function systemTheme(): "light" | "dark" {
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
@@ -37,27 +38,55 @@ function applyTheme(next: ThemePreference) {
 }
 
 function clearGlitchTimers() {
-  window.clearTimeout(waitTimer);
-  window.clearTimeout(burstTimer);
+  for (const timer of timers) window.clearTimeout(timer);
+  timers.length = 0;
 }
 
-function scheduleGlitch() {
+function scheduleGlitch(options: {
+  isBusy: () => boolean;
+  apply: (glitching: boolean, hard: boolean) => void;
+  minWait: number;
+  waitSpan: number;
+}) {
   if (prefersReducedMotion()) return;
 
-  waitTimer = window.setTimeout(() => {
-    hardGlitch.value = Math.random() < 0.28;
-    glitching.value = true;
-    burstTimer = window.setTimeout(() => {
-      glitching.value = false;
-      hardGlitch.value = false;
-      scheduleGlitch();
+  const waitTimer = window.setTimeout(() => {
+    if (options.isBusy()) {
+      scheduleGlitch({ ...options, minWait: 500, waitSpan: 900 });
+      return;
+    }
+
+    const hard = Math.random() < 0.28;
+    options.apply(true, hard);
+    const burstTimer = window.setTimeout(() => {
+      options.apply(false, false);
+      scheduleGlitch(options);
     }, 90 + Math.random() * 220);
-  }, 3500 + Math.random() * 9000);
+    timers.push(burstTimer);
+  }, options.minWait + Math.random() * options.waitSpan);
+  timers.push(waitTimer);
 }
 
 onMounted(() => {
   applyTheme(theme.value);
-  scheduleGlitch();
+  scheduleGlitch({
+    isBusy: () => themeGlitching.value,
+    apply: (glitching, hard) => {
+      brandGlitching.value = glitching;
+      brandHardGlitch.value = hard;
+    },
+    minWait: 3500,
+    waitSpan: 9000,
+  });
+  scheduleGlitch({
+    isBusy: () => brandGlitching.value,
+    apply: (glitching, hard) => {
+      themeGlitching.value = glitching;
+      themeHardGlitch.value = hard;
+    },
+    minWait: 5200,
+    waitSpan: 11000,
+  });
   window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
     if ((localStorage.getItem(THEME_KEY) || "system") === "system") applyTheme("system");
   });
@@ -73,7 +102,7 @@ onBeforeUnmount(clearGlitchTimers);
     <RouterLink
       to="/"
       class="brand-mark flex items-center gap-3 text-inherit no-underline"
-      :class="{ 'brand-glitch': glitching, 'brand-glitch-hard': hardGlitch }"
+      :class="{ 'brand-glitch': brandGlitching, 'brand-glitch-hard': brandHardGlitch }"
     >
       <img :src="logoSrc" alt="" width="80" height="80" class="brand-logo size-20 shrink-0" />
       <span class="brand-name font-brand text-[2rem] leading-none tracking-[0.14em] text-primary">
@@ -81,10 +110,13 @@ onBeforeUnmount(clearGlitchTimers);
       </span>
     </RouterLink>
 
-    <div class="flex items-center gap-3">
+    <div
+      class="theme-mark flex items-center gap-3"
+      :class="{ 'brand-glitch': themeGlitching, 'brand-glitch-hard': themeHardGlitch }"
+    >
       <a
         href="/"
-        class="text-sm font-semibold text-inherit no-underline opacity-70 transition-opacity duration-150 hover:opacity-100"
+        class="theme-label text-sm font-semibold text-inherit no-underline opacity-70 transition-opacity duration-150 hover:opacity-100"
       >
         Theme
       </a>
@@ -117,4 +149,3 @@ onBeforeUnmount(clearGlitchTimers);
     </div>
   </header>
 </template>
-

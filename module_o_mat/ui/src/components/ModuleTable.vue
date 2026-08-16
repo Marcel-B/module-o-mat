@@ -27,7 +27,9 @@ const emit = defineEmits<Emits>();
 const router = useRouter();
 const filters = ref(emptyTableFilters());
 const tableShell = ref<HTMLElement | null>(null);
+const tableGlitching = ref(false);
 let lastTableHeight = 0;
+let tableGlitchTimer = 0;
 
 const typeOptions = computed(() => props.groups.map((group) => group.type));
 
@@ -72,6 +74,18 @@ watch(
 onMounted(() => {
   lastTableHeight = currentTableHeight();
 });
+
+function glitchTable() {
+  if (prefersReducedMotion()) return;
+  tableGlitching.value = false;
+  window.clearTimeout(tableGlitchTimer);
+  requestAnimationFrame(() => {
+    tableGlitching.value = true;
+    tableGlitchTimer = window.setTimeout(() => {
+      tableGlitching.value = false;
+    }, 340);
+  });
+}
 
 // Menü-Items werden in `items` gehalten
 const activeModule = ref<Module | null>(null);
@@ -129,16 +143,20 @@ const toggle = (event: Event, data: Module) => {
 </script>
 
 <template>
-  <div ref="tableShell" class="module-table-shell overflow-hidden rounded-2xl border border-content-border bg-content">
+  <div
+    ref="tableShell"
+    class="module-table-shell overflow-hidden rounded-2xl border border-content-border bg-content"
+    :class="{ 'module-table-glitch': tableGlitching }"
+  >
     <DataTable :value="tableModules" v-model:filters="filters" size="small" row-group-mode="subheader" scrollable
-      scroll-height="calc(100vh - 20rem)" :global-filter-fields="['type', 'subtypesText', 'manufacturer', 'name', 'hp']"
-      group-rows-by="type" class="text-sm" responsive-layout="scroll">
+      scroll-height="calc(100vh - 23rem)" :global-filter-fields="['type', 'subtypesText', 'manufacturer', 'name', 'hp']"
+      group-rows-by="type" class="text-sm p-3" responsive-layout="scroll">
       <template #header>
         <div>
           <div class="flex justify-between">
 
-            <h1 class="mb-4 text-xl font-semibold">Eurorack-Module</h1>
-            <ActionMenu />
+            <h1 class="mb-4 text-xl font-semibold text-primary">Eurorack-Module</h1>
+            <ActionMenu @action="glitchTable" />
           </div>
           <ModuleFilters v-model="filters" :types="typeOptions" />
         </div>
@@ -153,7 +171,7 @@ const toggle = (event: Event, data: Module) => {
         <ProgressBar mode="indeterminate" style="height: 3px" />
       </template>
       <template #footer>
-        <div class="flex gap-4 align-baseline text-xs font-medium" v-if="stats">
+        <div class="flex gap-4 align-baseline text-xs font-medium mt-3" v-if="stats">
           <span>
             {{ stats.count }} {{ stats.count === 1 ? "Modul" : "Module" }}
           </span>
