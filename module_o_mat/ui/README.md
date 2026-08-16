@@ -1,6 +1,6 @@
-# ModuleOMat UI (PrimeVue)
+# ModuleOMat UI (PrimeVue + Tailwind)
 
-Vue-3-Oberfläche mit TypeScript, PrimeVue 4.5 (MIT, ohne Lizenzschlüssel), VeeValidate + Yup und Pinia. Sie spricht die JSON-API unter `/api/v1` an und bildet die Phoenix-LiveView ab.
+Vue-3-Oberfläche mit TypeScript, PrimeVue 4.5 (MIT, ohne Lizenzschlüssel), Tailwind CSS v4, VeeValidate + Yup und Pinia. Sie spricht die JSON-API unter `/api/v1` an und bildet die Phoenix-LiveView ab.
 
 ## Start
 

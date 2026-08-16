@@ -38,15 +38,22 @@ onMounted(() => {
 </script>
 
 <template>
-  <header class="app-header">
-    <RouterLink to="/" class="app-brand">
-      <img :src="logoSrc" alt="" width="36" />
-      <span>ModuleOMat</span>
+  <header
+    class="sticky top-0 z-20 flex min-h-16 items-center justify-between gap-4 border-b border-header-border bg-header px-6 py-3 backdrop-blur-lg"
+  >
+    <RouterLink to="/" class="flex items-center gap-3 text-inherit no-underline">
+      <img :src="logoSrc" alt="" width="40" height="40" class="size-10 shrink-0" />
+      <span class="text-[0.95rem] font-semibold tracking-wide">ModuleOMat</span>
     </RouterLink>
 
-    <div class="header-actions">
-      <a href="/" class="ui-switcher">Oberflächen</a>
-      <div class="theme-toggle">
+    <div class="flex items-center gap-3">
+      <a
+        href="/"
+        class="text-sm font-semibold text-inherit no-underline opacity-70 transition-opacity duration-150 hover:opacity-100"
+      >
+        Oberflächen
+      </a>
+      <div class="flex gap-0.5">
         <Button
           icon="pi pi-sun"
           rounded

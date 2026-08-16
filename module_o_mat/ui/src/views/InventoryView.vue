@@ -8,11 +8,11 @@ import { useInventoryStore } from '../stores/inventory'
 import { ApiError } from '../api/client'
 import { routeParam } from '../utils/format'
 import type { Module, ModuleFormMode, ModuleFormSubmit, ModuleType } from '../types'
-import ModuleFilters from '../components/ModuleFilters.vue'
-import ModuleTable from '../components/ModuleTable.vue'
-import ModuleDialog from '../components/ModuleDialog.vue'
-import TypeManagerDialog from '../components/TypeManagerDialog.vue'
-import BackupDialog from '../components/BackupDialog.vue'
+import ModuleFilters from '@/components/ModuleFilters.vue'
+import ModuleTable from '@/components/ModuleTable.vue'
+import ModuleDialog from '@/components/ModuleDialog.vue'
+import TypeManagerDialog from '@/components/TypeManagerDialog.vue'
+import BackupDialog from '@/components/BackupDialog.vue'
 
 const PriceHistoryDialog = defineAsyncComponent(
   () => import('../components/PriceHistoryDialog.vue'),
@@ -197,9 +197,9 @@ async function onImportBackup(file: File | null) {
 </script>
 
 <template>
-  <div class="page-head">
-    <h1>Eurorack-Module</h1>
-    <div class="head-actions">
+  <div class="mb-5 flex flex-wrap items-start justify-between gap-4">
+    <h1 class="m-0 text-[1.35rem] font-semibold">Eurorack-Module</h1>
+    <div class="flex flex-wrap gap-2">
       <Button id="backup-button" label="Datensicherung" severity="secondary" @click="router.push('/backup')" />
       <Button
         id="manage-module-types-button"
@@ -255,11 +255,3 @@ async function onImportBackup(file: File | null) {
     @close="closeDialogs"
   />
 </template>
-
-<style scoped>
-.head-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-</style>

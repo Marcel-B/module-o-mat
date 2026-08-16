@@ -44,7 +44,7 @@ erreichbar. Die Landing-Page lässt zwischen drei UIs wählen:
 Zwei Vue-3-Oberflächen liegen neben der LiveView. Beide sprechen `/api/v1`
 an; Vite proxied in der Entwicklung nach `http://localhost:4000`.
 
-- [`ui/`](ui/README.md) — fertige PrimeVue-Variante (VeeValidate + Yup, Pinia).
+- [`ui/`](ui/README.md) — fertige PrimeVue-Variante (Tailwind CSS, VeeValidate + Yup, Pinia).
   Start: `cd ui && npm install && npm run dev` →
   [http://localhost:5173](http://localhost:5173)
 - [`ui-alt/`](ui-alt/README.md) — Platzhalter für eine zweite Implementierung.
