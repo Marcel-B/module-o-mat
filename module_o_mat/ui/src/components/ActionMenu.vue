@@ -7,7 +7,7 @@ const emit = defineEmits<{
   action: [];
 }>();
 
-const menu = ref<Menu | null>(null);
+const menu = ref<InstanceType<typeof Menu> | null>(null);
 const router = useRouter();
 const items = ref([
   {
