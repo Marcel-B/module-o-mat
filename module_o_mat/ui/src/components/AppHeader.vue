@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from "vue";
 import { RouterLink } from "vue-router";
+import HeaderScope from "./HeaderScope.vue";
 
 type ThemePreference = "light" | "dark" | "system";
 
@@ -101,7 +102,7 @@ onBeforeUnmount(clearGlitchTimers);
   >
     <RouterLink
       to="/"
-      class="brand-mark flex items-center gap-3 text-inherit no-underline"
+      class="brand-mark flex shrink-0 items-center gap-3 text-inherit no-underline"
       :class="{ 'brand-glitch': brandGlitching, 'brand-glitch-hard': brandHardGlitch }"
     >
       <img :src="logoSrc" alt="" width="80" height="80" class="brand-logo size-20 shrink-0" />
@@ -110,8 +111,10 @@ onBeforeUnmount(clearGlitchTimers);
       </span>
     </RouterLink>
 
+    <HeaderScope />
+
     <div
-      class="theme-mark flex items-center gap-3"
+      class="theme-mark flex shrink-0 items-center gap-3"
       :class="{ 'brand-glitch': themeGlitching, 'brand-glitch-hard': themeHardGlitch }"
     >
       <a
