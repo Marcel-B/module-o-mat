@@ -154,7 +154,6 @@ const toggle = (event: Event, data: Module) => {
       <template #header>
         <div>
           <div class="flex justify-between">
-
             <h1 class="mb-4 text-xl font-semibold text-primary">Eurorack-Module</h1>
             <ActionMenu @action="glitchTable" />
           </div>
@@ -179,11 +178,9 @@ const toggle = (event: Event, data: Module) => {
             {{ stats.total_hp }} HP entspricht {{ formatHpWidth(stats) }}
           </span>
           <span>
-
             Kaufpreis: {{ formatEuro(stats.total_purchase_price) }}
           </span>
           <span>
-
             Wert: {{ formatEuro(stats.total_current_value) }}
           </span>
         </div>
@@ -207,7 +204,6 @@ const toggle = (event: Event, data: Module) => {
             <a :href="`/api/v1/modules/${data.id}/manual`" target="_blank" rel="noopener noreferrer">
               <Button :disabled="!data.has_manual" icon="pi pi-file-pdf" severity="secondary" text rounded></Button>
             </a>
-
             <div class="w-12 flex justify-center">
               <YoutubeHoverPreview v-if="primaryVideo(data)" :id="`open-youtube-${data.id}`"
                 :watch-url="youtubeWatchUrl(primaryVideo(data).url)"
@@ -223,7 +219,7 @@ const toggle = (event: Event, data: Module) => {
         </template>
       </Column>
       <template #groupheader="{ data }">
-        <div class="flex items-center gap-2 font-bold">
+        <div class="flex items-center gap-2 font-bold text-primary">
           <span>{{ data.type }}</span>
           <span class="text-surface-600">({{modules.filter((x) => x.type === data.type).length}}) </span>
         </div>

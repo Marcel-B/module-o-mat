@@ -34,6 +34,8 @@ function clearFilters() {
 </script>
 
 <template>
+  <div class="flex justify-between">
+
   <div id="module-filter-form" class="flex flex-wrap items-center gap-2">
     <FloatLabel variant="on">
       <IconField>
@@ -86,11 +88,14 @@ function clearFilters() {
       />
       <label class="text-xs" for="module-max-hp">Max HP</label>
     </FloatLabel>
-    <Button
+
+  </div>
+      <Button
       v-if="filtersActive"
       id="clear-filters-button"
       icon="pi pi-filter-slash"
       severity="secondary"
+      class="mr-1 text-primary"
       size="small"
       text
       rounded
