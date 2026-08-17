@@ -1,6 +1,17 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from "vue";
 
+type ScopeRate = "slow" | "fast";
+
+const SCOPE_KEY = "module-o-mat:scope-rate";
+const storedRate = localStorage.getItem(SCOPE_KEY);
+const rate = ref<ScopeRate>(storedRate === "slow" || storedRate === "fast" ? storedRate : "fast");
+
+const RATES = {
+  slow: { sweepSec: 2.2, persist: 0.84, retrace: true },
+  fast: { sweepSec: 0.38, persist: 0.955, retrace: false },
+} as const;
+
 const canvas = ref<HTMLCanvasElement | null>(null);
 
 let persist: HTMLCanvasElement | null = null;
@@ -54,6 +65,20 @@ function sizeCanvas() {
   persist.width = width;
   persist.height = height;
   beamX = 0;
+}
+
+function clearTrace() {
+  beamX = 0;
+  lastTs = 0;
+  persist?.getContext("2d")?.clearRect(0, 0, persist.width, persist.height);
+  canvas.value?.getContext("2d")?.clearRect(0, 0, canvas.value.width, canvas.value.height);
+}
+
+function applyRate(next: ScopeRate) {
+  if (rate.value === next) return;
+  rate.value = next;
+  localStorage.setItem(SCOPE_KEY, next);
+  clearTrace();
 }
 
 function drawPath(ctx: CanvasRenderingContext2D, width: number, height: number, time: number, color: string) {
@@ -110,12 +135,12 @@ function tick(ts: number) {
   const time = ts / 1000;
   const mid = height * 0.5;
   const amp = height * 0.42;
-  const sweepSec = 2.2;
-  let remain = (width / sweepSec) * dt;
+  const mode = RATES[rate.value];
+  let remain = (width / mode.sweepSec) * dt;
   const step = Math.max(1, width / 220);
 
   phosphor.globalCompositeOperation = "destination-in";
-  phosphor.fillStyle = "rgba(0,0,0,0.84)";
+  phosphor.fillStyle = `rgba(0,0,0,${mode.persist})`;
   phosphor.fillRect(0, 0, width, height);
   phosphor.globalCompositeOperation = "source-over";
   phosphor.strokeStyle = color;
@@ -128,8 +153,11 @@ function tick(ts: number) {
   while (remain > 0) {
     if (beamX >= width - 1) {
       beamX = 0;
-      remain = 0;
-      break;
+      if (mode.retrace) {
+        remain = 0;
+        break;
+      }
+      continue;
     }
 
     const advance = Math.min(step, remain, width - 1 - beamX);
@@ -179,7 +207,31 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="header-scope mx-1 hidden min-w-[7rem] flex-1 sm:block" aria-hidden="true">
-    <canvas ref="canvas" class="header-scope-canvas" />
+  <div class="header-scope-wrap mx-1 hidden min-w-[7rem] flex-1 items-center gap-1 sm:flex">
+    <div class="header-scope min-w-0 flex-1" aria-hidden="true">
+      <canvas ref="canvas" class="header-scope-canvas" />
+    </div>
+    <div class="flex shrink-0 gap-0.5">
+      <Button
+        icon="pi pi-circle"
+        rounded
+        text
+        :severity="rate === 'slow' ? 'primary' : 'secondary'"
+        :aria-pressed="rate === 'slow'"
+        aria-label="Langsamer Oszilloskop-Strahl"
+        title="Langsam"
+        @click="applyRate('slow')"
+      />
+      <Button
+        icon="pi pi-minus"
+        rounded
+        text
+        :severity="rate === 'fast' ? 'primary' : 'secondary'"
+        :aria-pressed="rate === 'fast'"
+        aria-label="Schneller Oszilloskop-Strahl"
+        title="Schnell"
+        @click="applyRate('fast')"
+      />
+    </div>
   </div>
 </template>
