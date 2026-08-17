@@ -163,7 +163,7 @@ onBeforeUnmount(() => {
         Für dieses Modul liegen noch keine Preisbeobachtungen vor.
       </p>
       <div class="flex justify-end pt-4">
-        <Button id="close-price-history-button" label="Schließen" @click="emit('close')" />
+        <Button id="close-price-history-button" label="Schließen" @click="emit('close')" size="small" />
       </div>
     </div>
   </Dialog>

@@ -76,6 +76,35 @@
   height: 100%;
 }
 
+.module-form-chip.p-chip {
+  margin: 0.125rem;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.78rem;
+  line-height: 1.2;
+  border-radius: 0.45rem;
+}
+
+.module-form-chip .p-chip-label {
+  font-size: 0.78rem;
+  line-height: 1.2;
+}
+
+#manual-pdf-upload .p-fileupload-basic-content {
+  justify-content: center;
+}
+
+#manual-pdf-upload .p-fileupload input[type="file"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .brand-mark {
     animation: crt-idle 7s linear infinite;

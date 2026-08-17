@@ -87,6 +87,7 @@ const onRename = handleEditSubmit((values) => {
           >
             <InputText
               :id="`module-type-edit-name-${type.id}`"
+              size="small"
               v-model="editName"
               v-bind="editNameAttrs"
             />
