@@ -1,54 +1,54 @@
 <script setup lang="ts">
-import { onBeforeUnmount, ref } from 'vue'
+import { onBeforeUnmount, ref } from "vue";
 
 interface Props {
-  id: string
-  watchUrl?: string | null
-  embedUrl?: string | null
+  id: string;
+  watchUrl?: string | null;
+  embedUrl?: string | null;
 }
 
-const props = defineProps<Props>()
+const props = defineProps<Props>();
 
-const overlay = ref<HTMLDivElement | null>(null)
+const overlay = ref<HTMLDivElement | null>(null);
 
 function hide() {
-  overlay.value?.remove()
-  overlay.value = null
+  overlay.value?.remove();
+  overlay.value = null;
 }
 
 function show(event: MouseEvent) {
-  if (!props.embedUrl) return
-  hide()
+  if (!props.embedUrl) return;
+  hide();
 
-  const node = document.createElement('div')
-  node.id = `youtube-preview-${props.id}`
+  const node = document.createElement("div");
+  node.id = `youtube-preview-${props.id}`;
   node.className =
-    'pointer-events-none fixed z-50 w-80 max-w-[min(20rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-content-border bg-content shadow-[0_18px_40px_rgb(15_18_24_/_28%)]'
+    "pointer-events-none fixed z-50 w-80 max-w-[min(20rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-content-border bg-content shadow-[0_18px_40px_rgb(15_18_24/28%)]";
 
-  const iframe = document.createElement('iframe')
-  iframe.src = props.embedUrl
-  iframe.title = 'YouTube-Vorschau'
-  iframe.className = 'aspect-video block h-auto w-full border-0'
+  const iframe = document.createElement("iframe");
+  iframe.src = props.embedUrl;
+  iframe.title = "YouTube-Vorschau";
+  iframe.className = "block aspect-video h-auto w-full border-0";
   iframe.allow =
-    'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
-  iframe.allowFullscreen = true
-  node.appendChild(iframe)
-  document.body.appendChild(node)
-  overlay.value = node
+    "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
+  iframe.allowFullscreen = true;
+  node.appendChild(iframe);
+  document.body.appendChild(node);
+  overlay.value = node;
 
-  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
-  const overlayRect = node.getBoundingClientRect()
-  let top = rect.bottom + 8
-  let left = rect.right - overlayRect.width
-  if (left < 8) left = 8
+  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+  const overlayRect = node.getBoundingClientRect();
+  let top = rect.bottom + 8;
+  let left = rect.right - overlayRect.width;
+  if (left < 8) left = 8;
   if (top + overlayRect.height > window.innerHeight - 8) {
-    top = Math.max(8, rect.top - overlayRect.height - 8)
+    top = Math.max(8, rect.top - overlayRect.height - 8);
   }
-  node.style.top = `${top}px`
-  node.style.left = `${left}px`
+  node.style.top = `${top}px`;
+  node.style.left = `${left}px`;
 }
 
-onBeforeUnmount(hide)
+onBeforeUnmount(hide);
 </script>
 
 <template>
@@ -63,6 +63,7 @@ onBeforeUnmount(hide)
     @mouseenter="show"
     @mouseleave="hide"
   >
-    <span class="pi pi-play" />
+    <span class="pi pi-youtube" />
   </a>
 </template>
+
