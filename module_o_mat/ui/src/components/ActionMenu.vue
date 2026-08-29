@@ -28,6 +28,12 @@ const items = ref([
     icon: "pi pi-database",
     command: () => router.push("/backup"),
   },
+  {
+    label: "Sicherungshistorie",
+    icon: "pi pi-clock",
+    id: "backup-history-menu-item",
+    command: () => router.push("/backup-history"),
+  },
 ]);
 
 function toggle(event: Event) {

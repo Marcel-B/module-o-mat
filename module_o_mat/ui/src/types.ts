@@ -144,6 +144,23 @@ export type BackupImportResponse = {
   imported: boolean
 }
 
+export type BackupRun = {
+  id: number
+  occurred_at: string
+  filename: string | null
+  size_bytes: number | null
+  success: boolean
+}
+
+export type BackupHistoryResponse = {
+  backup_runs: BackupRun[]
+  page: number
+  per_page: number
+  total: number
+  last_success_at: string | null
+  last_failure_at: string | null
+}
+
 export type MaintenanceStatus = {
   maintenance: boolean
 }

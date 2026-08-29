@@ -3,6 +3,7 @@ defmodule ModuleOMat.Inventory.RemoteBackupTest do
 
   import ModuleOMat.InventoryFixtures
 
+  alias ModuleOMat.Inventory
   alias ModuleOMat.Inventory.RemoteBackup
 
   test "weekday_filename nutzt Timezone fuer Wochentag" do
@@ -14,6 +15,7 @@ defmodule ModuleOMat.Inventory.RemoteBackupTest do
 
   test "run ist deaktiviert ohne enabled-Flag" do
     assert {:error, :disabled} = RemoteBackup.run(enabled: false)
+    assert Inventory.list_backup_runs().total == 0
   end
 
   test "run exportiert und laedt Wochentags-ZIP hoch" do
@@ -48,6 +50,13 @@ defmodule ModuleOMat.Inventory.RemoteBackupTest do
              )
 
     assert_received {:uploaded, ^filename, size} when size > 0
+
+    page = Inventory.list_backup_runs()
+    assert page.total == 1
+    [run] = page.backup_runs
+    assert run.filename == filename
+    assert run.size_bytes == size
+    assert run.success
   end
 
   test "run meldet fehlende Credentials" do
@@ -58,5 +67,12 @@ defmodule ModuleOMat.Inventory.RemoteBackupTest do
                username: "user",
                password: "secret"
              )
+
+    page = Inventory.list_backup_runs()
+    assert page.total == 1
+    [run] = page.backup_runs
+    refute run.success
+    assert run.filename
+    assert run.size_bytes == nil
   end
 end

@@ -51,26 +51,71 @@ defmodule ModuleOMat.Inventory.RemoteBackup do
   end
 
   defp do_run(config) do
-    with :ok <- validate_config(config) do
-      filename = weekday_filename(DateTime.utc_now(), config.timezone)
-      tmp_path = tmp_zip_path(filename)
-      webdav_opts = webdav_opts(config)
+    filename = weekday_filename(DateTime.utc_now(), config.timezone)
 
-      try do
-        with :ok <- maybe_ensure_collection(config, webdav_opts),
-             {:ok, ^tmp_path} <- Inventory.export_backup(tmp_path),
-             :ok <- log_upload(filename, tmp_path),
-             :ok <- WebDAV.put_file(config.base_url, filename, tmp_path, webdav_opts) do
-          Logger.info("Nextcloud-Backup hochgeladen: #{filename}")
-          {:ok, filename}
-        else
-          {:error, reason} ->
-            Logger.error("Nextcloud-Backup fehlgeschlagen: #{format_reason(reason)}")
-            {:error, reason}
+    result =
+      with :ok <- validate_config(config) do
+        tmp_path = tmp_zip_path(filename)
+        webdav_opts = webdav_opts(config)
+
+        try do
+          with :ok <- maybe_ensure_collection(config, webdav_opts),
+               {:ok, ^tmp_path} <- Inventory.export_backup(tmp_path),
+               :ok <- log_upload(filename, tmp_path),
+               :ok <- WebDAV.put_file(config.base_url, filename, tmp_path, webdav_opts) do
+            Logger.info("Nextcloud-Backup hochgeladen: #{filename}")
+            {:ok, filename, zip_size(tmp_path)}
+          else
+            {:error, reason} ->
+              Logger.error("Nextcloud-Backup fehlgeschlagen: #{format_reason(reason)}")
+              {:error, reason, zip_size(tmp_path)}
+          end
+        after
+          File.rm(tmp_path)
         end
-      after
-        File.rm(tmp_path)
+      else
+        {:error, reason} ->
+          {:error, reason, nil}
       end
+
+    record_run(filename, result)
+    strip_size(result)
+  end
+
+  defp record_run(filename, {:ok, _filename, size}) do
+    persist_run(%{filename: filename, size_bytes: size, success: true})
+  end
+
+  defp record_run(filename, {:error, _reason, size}) do
+    persist_run(%{filename: filename, size_bytes: size, success: false})
+  end
+
+  defp persist_run(attrs) do
+    try do
+      case Inventory.record_backup_run(attrs) do
+        {:ok, _} ->
+          :ok
+
+        {:error, changeset} ->
+          Logger.error(
+            "Sicherungshistorie konnte nicht gespeichert werden: #{inspect(changeset.errors)}"
+          )
+      end
+    rescue
+      error ->
+        Logger.error(
+          "Sicherungshistorie konnte nicht gespeichert werden: #{Exception.message(error)}"
+        )
+    end
+  end
+
+  defp strip_size({:ok, filename, _size}), do: {:ok, filename}
+  defp strip_size({:error, reason, _size}), do: {:error, reason}
+
+  defp zip_size(path) do
+    case File.stat(path) do
+      {:ok, %{size: size}} -> size
+      _ -> nil
     end
   end
 

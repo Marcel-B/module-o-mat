@@ -15,6 +15,7 @@ declare module 'vue' {
     AppHeader: typeof import('./src/components/AppHeader.vue')['default']
     AutoComplete: typeof import('primevue/autocomplete')['default']
     BackupDialog: typeof import('./src/components/BackupDialog.vue')['default']
+    BackupHistoryDialog: typeof import('./src/components/BackupHistoryDialog.vue')['default']
     Button: typeof import('primevue/button')['default']
     Chip: typeof import('primevue/chip')['default']
     ConfirmDialog: typeof import('primevue/confirmdialog')['default']

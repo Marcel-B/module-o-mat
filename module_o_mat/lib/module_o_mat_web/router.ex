@@ -81,6 +81,7 @@ defmodule ModuleOMatWeb.Router do
 
     get "/backup/export", BackupController, :export
     post "/backup/import", BackupController, :import_backup
+    get "/backup/history", BackupController, :history
 
     get "/maintenance", MaintenanceController, :show
   end

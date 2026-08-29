@@ -3,6 +3,7 @@ defmodule ModuleOMatWeb.Api.JSON do
   Gemeinsame JSON-Serialisierung fuer die HTTP-API (v1 und Agenten-Aliase).
   """
 
+  alias ModuleOMat.Inventory.BackupRun
   alias ModuleOMat.Inventory.EurorackModule
   alias ModuleOMat.Inventory.ModulePriceObservation
   alias ModuleOMat.Inventory.ModuleType
@@ -83,6 +84,27 @@ defmodule ModuleOMatWeb.Api.JSON do
       updated_at: module.updated_at
     }
     |> maybe_put_observations(module)
+  end
+
+  def backup_run(%BackupRun{} = run) do
+    %{
+      id: run.id,
+      occurred_at: run.inserted_at,
+      filename: run.filename,
+      size_bytes: run.size_bytes,
+      success: run.success
+    }
+  end
+
+  def backup_history(page) when is_map(page) do
+    %{
+      backup_runs: Enum.map(page.backup_runs, &backup_run/1),
+      page: page.page,
+      per_page: page.per_page,
+      total: page.total,
+      last_success_at: page.last_success_at,
+      last_failure_at: page.last_failure_at
+    }
   end
 
   def stats(stats) when is_map(stats) do

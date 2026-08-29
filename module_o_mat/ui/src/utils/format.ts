@@ -39,6 +39,19 @@ export function formatDate(isoDate: string | null | undefined): string {
   return `${day}.${month}.${year}`
 }
 
+export function formatDateTime(isoDate: string | null | undefined): string {
+  if (!isoDate) return '—'
+  const date = new Date(isoDate)
+  if (Number.isNaN(date.getTime())) return String(isoDate)
+  return date.toLocaleString('de-DE', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
 export function formatHpWidth(stats: InventoryStats | null | undefined): string {
   if (!stats) return ''
   const cm = Number(stats.total_width_cm ?? 0).toLocaleString('de-DE', {

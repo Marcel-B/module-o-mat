@@ -1,4 +1,5 @@
 import type {
+  BackupHistoryResponse,
   BackupImportResponse,
   ManufacturersResponse,
   MaintenanceStatus,
@@ -102,6 +103,13 @@ export function importBackup(file: File): Promise<BackupImportResponse> {
   const body = new FormData()
   body.append('file', file)
   return request<BackupImportResponse>('/backup/import', { method: 'POST', body })
+}
+
+export function listBackupHistory(page = 1): Promise<BackupHistoryResponse> {
+  const params = new URLSearchParams()
+  if (page > 1) params.set('page', String(page))
+  const suffix = params.toString() ? `?${params}` : ''
+  return request<BackupHistoryResponse>(`/backup/history${suffix}`)
 }
 
 export function getMaintenance(): Promise<MaintenanceStatus> {

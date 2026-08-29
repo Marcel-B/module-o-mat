@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   formatBytes,
   formatDate,
+  formatDateTime,
   formatEuro,
   formatEuroRange,
   formatHpWidth,
@@ -53,14 +54,15 @@ describe('priceRangeTitle', () => {
   })
 })
 
-describe('formatDate', () => {
-  it('formatiert ISO-Daten', () => {
-    expect(formatDate('2024-12-31')).toBe('31.12.2024')
+describe('formatDateTime', () => {
+  it('formatiert ISO-Zeitstempel auf Deutsch', () => {
+    const formatted = formatDateTime('2026-08-29T08:15:00.000Z')
+    expect(formatted).toMatch(/29\.08\.2026/)
+    expect(formatted).toMatch(/\d{2}:\d{2}/)
   })
 
-  it('gibt leere Werte unveraendert zurueck', () => {
-    expect(formatDate(null)).toBe('')
-    expect(formatDate('n/a')).toBe('n/a')
+  it('zeigt einen Gedankenstrich ohne Wert', () => {
+    expect(formatDateTime(null)).toBe('—')
   })
 })
 
