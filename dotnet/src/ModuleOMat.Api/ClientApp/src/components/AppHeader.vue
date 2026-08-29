@@ -2,13 +2,14 @@
 import { onBeforeUnmount, onMounted, ref } from "vue";
 import { RouterLink } from "vue-router";
 import HeaderScope from "./HeaderScope.vue";
+import brandLogo from "@/assets/brand-logo.svg?url";
 
 type ThemePreference = "light" | "dark" | "system";
 
 const THEME_KEY = "module-o-mat:theme";
 const stored = localStorage.getItem(THEME_KEY);
 const theme = ref<ThemePreference>(stored === "light" || stored === "dark" || stored === "system" ? stored : "system");
-const logoSrc = `${import.meta.env.BASE_URL}logo.svg`;
+const logoSrc = brandLogo;
 const brandGlitching = ref(false);
 const brandHardGlitch = ref(false);
 const themeGlitching = ref(false);

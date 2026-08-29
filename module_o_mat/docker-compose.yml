@@ -1,7 +1,9 @@
 services:
   web:
     image: ghcr.io/marcel-b/module-o-mat:${IMAGE_TAG:-latest}
-    build: .
+    build:
+      context: ..
+      dockerfile: module_o_mat/Dockerfile
     ports:
       - "${PORT:-4000}:4000"
     environment:

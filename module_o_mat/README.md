@@ -36,18 +36,18 @@ Die Oberfläche ist danach unter [http://localhost:4000](http://localhost:4000)
 erreichbar. Die Landing-Page lässt zwischen drei UIs wählen:
 
 - [LiveView](http://localhost:4000/live)
-- [Vue UI](http://localhost:4000/ui) (nach `mix assets.build_vue` bzw. im Docker-Image)
+- [Vue UI](http://localhost:4000/ui) (nach `mix assets.build_vue`; Quelle: `dotnet/src/ModuleOMat.Api/ClientApp`)
 - [Vue UI-Alt](http://localhost:4000/ui-alt)
 
 ## Vue-UIs
 
 Zwei Vue-3-Oberflächen liegen neben der LiveView. Beide sprechen `/api/v1`
-an; Vite proxied in der Entwicklung nach `http://localhost:4000`.
+an.
 
-- [`ui/`](ui/README.md) — fertige PrimeVue-Variante (Tailwind CSS, VeeValidate + Yup, Pinia).
-  Start: `cd ui && npm install && npm run dev` →
-  [http://localhost:5173](http://localhost:5173)
-- [`ui-alt/`](ui-alt/README.md) — Platzhalter für eine zweite Implementierung.
+- [`../dotnet/src/ModuleOMat.Api/ClientApp`](../dotnet/src/ModuleOMat.Api/ClientApp/README.md) — PrimeVue-Variante.
+  Lokal mit .NET: `dotnet run --project src/ModuleOMat.Api` →
+  [http://localhost:5012/ui](http://localhost:5012/ui)
+- [`ui-alt/`](ui-alt/README.md) — zweite Implementierung.
   Start: `cd ui-alt && npm install && npm run dev` →
   [http://localhost:5174](http://localhost:5174)
 
@@ -57,8 +57,8 @@ Für die Auslieferung durch Phoenix (Landing-Page-Links `/ui` und `/ui-alt`):
 mix assets.build_vue
 ```
 
-Im Docker-Image werden beide Vue-Apps automatisch mitgebaut. Phoenix (`mix phx.server`)
-muss für die Vite-Entwicklung parallel laufen.
+Im Docker-Image werden beide Vue-Apps automatisch mitgebaut. Die PrimeVue-UI
+entwickelt man mit `dotnet run` (Vite startet mit).
 
 ## HTTP-API
 
@@ -105,7 +105,7 @@ mix test
 Die Vue-UI hat eigene Tests:
 
 ```bash
-cd ui && npm test
+cd ../dotnet/src/ModuleOMat.Api/ClientApp && npm test
 ```
 
 ## Deploy mit Docker / Podman

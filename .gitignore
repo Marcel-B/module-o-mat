@@ -6,7 +6,7 @@
 ._*
 
 # Custom folder icons
-Icon
+Icon
 
 # Volume root files
 .DocumentRevisions-V100
@@ -16,3 +16,18 @@ Icon
 .Trashes
 .VolumeIcon.icns
 .com.apple.timemachine.donotpresent
+
+# .NET
+**/bin/
+**/obj/
+*.user
+*.suo
+.vs/
+TestResults/
+*.db
+*.db-shm
+*.db-wal
+dotnet/**/data/
+dotnet/**/uploads/
+dotnet/src/ModuleOMat.Api/wwwroot/ui/
+dotnet/src/ModuleOMat.Api/wwwroot/ui-alt/

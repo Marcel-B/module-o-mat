@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <RootNamespace>ModuleOMat.Api</RootNamespace>
+    <SpaRoot>ClientApp\</SpaRoot>
+    <DefaultItemExcludes>$(DefaultItemExcludes);$(SpaRoot)node_modules\**;$(SpaRoot)dist\**</DefaultItemExcludes>
+    <SkipClientAppBuild Condition="'$(SkipClientAppBuild)' == ''">false</SkipClientAppBuild>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove="$(SpaRoot)**" />
+    <Content Remove="$(SpaRoot)**" />
+    <EmbeddedResource Remove="$(SpaRoot)**" />
+    <None Remove="$(SpaRoot)**" />
+    <TypeScriptCompile Remove="$(SpaRoot)**" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ModuleOMat.Domain\ModuleOMat.Domain.csproj" />
+    <ProjectReference Include="..\ModuleOMat.Infrastructure\ModuleOMat.Infrastructure.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.SpaServices.Extensions" Version="10.0.11" />
+    <PackageReference Include="Microsoft.OpenApi" Version="2.7.5" />
+    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="9.0.4" />
+  </ItemGroup>
+  <Target Name="PublishClientApp" AfterTargets="ComputeFilesToPublish" Condition="'$(SkipClientAppBuild)' != 'true'">
+    <Exec WorkingDirectory="$(MSBuildThisFileDirectory)$(SpaRoot)" Command="npm ci" />
+    <Exec WorkingDirectory="$(MSBuildThisFileDirectory)$(SpaRoot)" Command="npm run build" />
+    <ItemGroup>
+      <DistFiles Include="$(MSBuildThisFileDirectory)$(SpaRoot)dist\**" />
+      <ResolvedFileToPublish Include="@(DistFiles->'%(FullPath)')" Exclude="@(ResolvedFileToPublish)">
+        <RelativePath>wwwroot\ui\%(RecursiveDir)%(Filename)%(Extension)</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
+  <Target Name="CopyVueAlt" AfterTargets="Build">
+    <PropertyGroup>
+      <VueAltSource Condition="Exists('$(MSBuildThisFileDirectory)..\..\..\module_o_mat\priv\vue\ui-alt\index.html')">$(MSBuildThisFileDirectory)..\..\..\module_o_mat\priv\vue\ui-alt</VueAltSource>
+      <VueAltSource Condition="'$(VueAltSource)' == '' And Exists('$(MSBuildThisFileDirectory)..\..\..\module_o_mat\ui-alt\dist\index.html')">$(MSBuildThisFileDirectory)..\..\..\module_o_mat\ui-alt\dist</VueAltSource>
+    </PropertyGroup>
+    <MakeDir Directories="$(MSBuildThisFileDirectory)wwwroot\ui-alt" Condition="'$(VueAltSource)' != ''" />
+    <MakeDir Directories="$(OutputPath)wwwroot\ui-alt" Condition="'$(VueAltSource)' != ''" />
+    <ItemGroup>
+      <_VueAltFiles Include="$(VueAltSource)\**\*" Condition="'$(VueAltSource)' != ''" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_VueAltFiles)" DestinationFolder="$(MSBuildThisFileDirectory)wwwroot\ui-alt\%(RecursiveDir)" SkipUnchangedFiles="true" Condition="'$(VueAltSource)' != ''" />
+    <Copy SourceFiles="@(_VueAltFiles)" DestinationFolder="$(OutputPath)wwwroot\ui-alt\%(RecursiveDir)" SkipUnchangedFiles="true" Condition="'$(VueAltSource)' != ''" />
+  </Target>
+</Project>
