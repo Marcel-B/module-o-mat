@@ -5,7 +5,7 @@ import tailwindcss from '@tailwindcss/vite'
 import Components from 'unplugin-vue-components/vite'
 import { PrimeVueResolver } from '@primevue/auto-import-resolver'
 
-const apiProxy = process.env.VITE_API_PROXY || 'http://127.0.0.1:5012'
+const apiProxy = process.env.VITE_API_PROXY || 'http://127.0.0.1:5173'
 
 export default defineConfig({
   base: '/ui/',
@@ -44,7 +44,7 @@ export default defineConfig({
   ],
   server: {
     host: '127.0.0.1',
-    port: Number(process.env.PORT) || 5173,
+    port: Number(process.env.PORT) || 5012,
     strictPort: true,
     proxy: {
       '/api': {
