@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
-import { formatEuro, formatEuroRange, formatHpWidth } from "../utils/format";
+import { formatEuro, formatEuroRange, formatHpWidth, formatDateTime } from "../utils/format";
 import { youtubeEmbedUrl, youtubeWatchUrl } from "../utils/youtube";
 import type { InventoryStats, Module, ModuleGroup } from "../types";
 import ModuleFilters from "@/components/ModuleFilters.vue";
@@ -14,6 +14,8 @@ interface Props {
   modules: Module[];
   groups: ModuleGroup[];
   stats?: InventoryStats | null;
+  lastSuccessAt?: string | null;
+  lastFailureAt?: string | null;
   filtersActive?: boolean;
   loading?: boolean;
 }
@@ -170,19 +172,32 @@ const toggle = (event: Event, data: Module) => {
         <ProgressBar mode="indeterminate" style="height: 3px" />
       </template>
       <template #footer>
-        <div class="flex gap-4 align-baseline text-xs font-medium mt-3" v-if="stats">
-          <span>
-            {{ stats.count }} {{ stats.count === 1 ? "Modul" : "Module" }}
-          </span>
-          <span>
-            {{ stats.total_hp }} HP entspricht {{ formatHpWidth(stats) }}
-          </span>
-          <span>
-            Kaufpreis: {{ formatEuro(stats.total_purchase_price) }}
-          </span>
-          <span>
-            Wert: {{ formatEuro(stats.total_current_value) }}
-          </span>
+        <div class="mt-3 flex flex-wrap items-baseline justify-between gap-3 text-xs font-medium">
+          <div class="flex flex-wrap gap-4" v-if="stats">
+            <span>
+              {{ stats.count }} {{ stats.count === 1 ? "Modul" : "Module" }}
+            </span>
+            <span>
+              {{ stats.total_hp }} HP entspricht {{ formatHpWidth(stats) }}
+            </span>
+            <span>
+              Kaufpreis: {{ formatEuro(stats.total_purchase_price) }}
+            </span>
+            <span>
+              Wert: {{ formatEuro(stats.total_current_value) }}
+            </span>
+          </div>
+          <div
+            id="backup-history-status"
+            class="ml-auto shrink-0 text-right text-surface-600"
+          >
+            <div id="last-backup-success">
+              Letzte Sicherung: {{ formatDateTime(lastSuccessAt) }}
+            </div>
+            <div id="last-backup-failure">
+              Letzter Fehlschlag: {{ formatDateTime(lastFailureAt) }}
+            </div>
+          </div>
         </div>
       </template>
       <Column field="type" header="Typ" />

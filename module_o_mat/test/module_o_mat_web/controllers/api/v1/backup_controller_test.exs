@@ -62,4 +62,45 @@ defmodule ModuleOMatWeb.Api.V1.BackupControllerTest do
       assert %{"error" => _} = json_response(conn, 422)
     end
   end
+
+  describe "GET /api/v1/backup/history" do
+    test "liefert eine Seite mit fuenf Eintraegen und Status", %{conn: conn} do
+      for n <- 1..6 do
+        backup_run_fixture(%{
+          filename: "inventory-#{n}.zip",
+          size_bytes: n * 100,
+          success: n != 3
+        })
+      end
+
+      conn = get(conn, ~p"/api/v1/backup/history")
+      body = json_response(conn, 200)
+
+      assert body["page"] == 1
+      assert body["per_page"] == 5
+      assert body["total"] == 6
+      assert length(body["backup_runs"]) == 5
+      assert body["last_success_at"]
+      assert body["last_failure_at"]
+
+      [first | _] = body["backup_runs"]
+      assert first["filename"] == "inventory-6.zip"
+      assert first["success"] == true
+      assert first["size_bytes"] == 600
+      assert first["occurred_at"]
+    end
+
+    test "laedt die naechste Seite vom Server", %{conn: conn} do
+      for n <- 1..6 do
+        backup_run_fixture(%{filename: "inventory-#{n}.zip"})
+      end
+
+      conn = get(conn, ~p"/api/v1/backup/history", %{"page" => "2"})
+      body = json_response(conn, 200)
+
+      assert body["page"] == 2
+      assert length(body["backup_runs"]) == 1
+      assert hd(body["backup_runs"])["filename"] == "inventory-1.zip"
+    end
+  end
 end

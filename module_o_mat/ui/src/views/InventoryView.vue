@@ -12,6 +12,7 @@ import ModuleTable from '@/components/ModuleTable.vue'
 import ModuleDialog from '@/components/ModuleDialog.vue'
 import TypeManagerDialog from '@/components/TypeManagerDialog.vue'
 import BackupDialog from '@/components/BackupDialog.vue'
+import BackupHistoryDialog from '@/components/BackupHistoryDialog.vue'
 
 const PriceHistoryDialog = defineAsyncComponent(
   () => import('../components/PriceHistoryDialog.vue'),
@@ -22,7 +23,7 @@ const router = useRouter()
 const toast = useToast()
 const confirm = useConfirm()
 const store = useInventoryStore()
-const { groupedModules, modules, stats, filtersActive, loading, manufacturers, typeNames, moduleTypes } =
+const { groupedModules, modules, stats, lastSuccessAt, lastFailureAt, filtersActive, loading, manufacturers, typeNames, moduleTypes } =
   storeToRefs(store)
 
 const currentModule = ref<Module | null>(null)
@@ -46,6 +47,7 @@ const moduleDialogVisible = computed(() => {
 })
 const typesVisible = computed(() => routeName() === 'types')
 const backupVisible = computed(() => routeName() === 'backup')
+const backupHistoryVisible = computed(() => routeName() === 'backup-history')
 const priceHistoryVisible = computed(
   () =>
     routeName() === 'price-history' &&
@@ -200,6 +202,8 @@ async function onImportBackup(file: File | null) {
     :modules="modules"
     :groups="groupedModules"
     :stats="stats"
+    :last-success-at="lastSuccessAt"
+    :last-failure-at="lastFailureAt"
     :filters-active="filtersActive"
     :loading="loading"
     @delete="askDelete"
@@ -231,6 +235,8 @@ async function onImportBackup(file: File | null) {
     @export="onExportBackup"
     @import="onImportBackup"
   />
+
+  <BackupHistoryDialog :visible="backupHistoryVisible" @close="closeDialogs" />
 
   <PriceHistoryDialog
     :visible="priceHistoryVisible"

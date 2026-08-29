@@ -7,6 +7,7 @@ defmodule ModuleOMatWeb.Api.V1.BackupController do
   use OpenApiSpex.ControllerSpecs
 
   alias ModuleOMat.Inventory
+  alias ModuleOMatWeb.Api.JSON
   alias ModuleOMatWeb.Api.Params
   alias ModuleOMatWeb.Api.Schemas
 
@@ -85,5 +86,26 @@ defmodule ModuleOMatWeb.Api.V1.BackupController do
   defp zip_upload?(filename, content_type) do
     String.ends_with?(String.downcase(filename), ".zip") or
       String.contains?(content_type, "zip")
+  end
+
+  operation :history,
+    summary: "Sicherungshistorie",
+    description: "Letzte Sicherungsversuche, paginiert (fuenf Eintraege pro Seite).",
+    parameters: [
+      page: [
+        in: :query,
+        type: :integer,
+        description: "Seitennummer, beginnend bei 1",
+        required: false
+      ]
+    ],
+    responses: [
+      ok: {"Historie", "application/json", Schemas.BackupHistoryResponse}
+    ]
+
+  def history(conn, params) do
+    page = Params.page(params)
+
+    json(conn, JSON.backup_history(Inventory.list_backup_runs(page: page)))
   end
 end

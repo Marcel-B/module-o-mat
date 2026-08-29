@@ -67,6 +67,13 @@ app.use(PrimeVue, {
     emptyMessage: 'Keine Einträge',
     emptySearchMessage: 'Keine Ergebnisse gefunden',
     selectionMessage: '{0} Einträge ausgewählt',
+    firstPageLabel: 'Erste Seite',
+    lastPageLabel: 'Letzte Seite',
+    nextPageLabel: 'Nächste Seite',
+    prevPageLabel: 'Vorherige Seite',
+    aria: {
+      pageLabel: 'Seite {page}',
+    },
   },
 })
 app.use(ToastService)

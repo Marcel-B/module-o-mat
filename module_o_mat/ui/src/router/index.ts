@@ -47,6 +47,12 @@ const router = createRouter({
       component: InventoryView,
       meta: { title: 'Datensicherung' },
     },
+    {
+      path: '/backup-history',
+      name: 'backup-history',
+      component: InventoryView,
+      meta: { title: 'Sicherungshistorie' },
+    },
   ],
 })
 

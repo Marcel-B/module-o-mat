@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createModule, getMaintenance, listModules } from './inventory'
+import { createModule, getMaintenance, listBackupHistory, listModules } from './inventory'
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -77,5 +77,25 @@ describe('getMaintenance', () => {
 
     await expect(getMaintenance()).resolves.toEqual({ maintenance: true })
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/maintenance', expect.any(Object))
+  })
+})
+
+describe('listBackupHistory', () => {
+  it('fragt Seite 1 ohne Query an', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ backup_runs: [], total: 0 }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await listBackupHistory()
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/backup/history', expect.any(Object))
+  })
+
+  it('setzt die Seite als Query-Parameter', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ backup_runs: [], total: 0 }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await listBackupHistory(2)
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/backup/history?page=2', expect.any(Object))
   })
 })

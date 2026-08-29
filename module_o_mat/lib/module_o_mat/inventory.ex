@@ -9,12 +9,15 @@ defmodule ModuleOMat.Inventory do
   import Ecto.Query, warn: false
 
   alias ModuleOMat.Repo
+  alias ModuleOMat.Inventory.BackupRun
   alias ModuleOMat.Inventory.EurorackModule
   alias ModuleOMat.Inventory.ManualStorage
   alias ModuleOMat.Inventory.ModulePriceObservation
   alias ModuleOMat.Inventory.ModuleType
   alias ModuleOMat.Inventory.RemoteBackupScheduler
   alias ModuleOMat.Inventory.YoutubeVideo
+
+  @backup_history_page_size 5
 
   @doc """
   Name des Fallback-Typs, auf den Module zurueckfallen, wenn ihr bisheriger
@@ -847,6 +850,64 @@ defmodule ModuleOMat.Inventory do
   end
 
   defp cast_decimal(_), do: :error
+
+  @doc """
+  Speichert einen Sicherungsversuch in der Historie.
+
+  Die Historie ist kein Bestandteil des Inventar-Backups.
+  """
+  def record_backup_run(attrs) when is_map(attrs) do
+    %BackupRun{}
+    |> BackupRun.changeset(attrs)
+    |> Repo.insert()
+  end
+
+  @doc """
+  Seite der Sicherungshistorie, neueste zuerst. Standard sind fuenf Eintraege.
+  """
+  def list_backup_runs(opts \\ []) when is_list(opts) do
+    page = max(positive_integer(Keyword.get(opts, :page)) || 1, 1)
+    per_page = @backup_history_page_size
+    offset = (page - 1) * per_page
+
+    total = Repo.aggregate(BackupRun, :count, :id)
+
+    backup_runs =
+      BackupRun
+      |> order_by([r], desc: r.inserted_at, desc: r.id)
+      |> limit(^per_page)
+      |> offset(^offset)
+      |> Repo.all()
+
+    %{
+      backup_runs: backup_runs,
+      page: page,
+      per_page: per_page,
+      total: total,
+      last_success_at: latest_backup_run_at(true),
+      last_failure_at: latest_backup_run_at(false)
+    }
+  end
+
+  @doc """
+  Zeitpunkte der letzten erfolgreichen und der letzten fehlgeschlagenen
+  Datensicherung.
+  """
+  def backup_run_status do
+    %{
+      last_success_at: latest_backup_run_at(true),
+      last_failure_at: latest_backup_run_at(false)
+    }
+  end
+
+  defp latest_backup_run_at(success) when is_boolean(success) do
+    BackupRun
+    |> where([r], r.success == ^success)
+    |> order_by([r], desc: r.inserted_at, desc: r.id)
+    |> limit(1)
+    |> select([r], r.inserted_at)
+    |> Repo.one()
+  end
 
   @doc """
   Exportiert den aktuellen Inventar-Bestand (ohne Soft-Deletes) inkl.

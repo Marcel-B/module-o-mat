@@ -121,6 +121,20 @@ defmodule ModuleOMat.Inventory.BackupTest do
       assert "Granular" in Inventory.list_module_types()
     end
 
+    test "laesst die Sicherungshistorie unangetastet" do
+      history = backup_run_fixture(%{filename: "inventory-keep.zip", success: true})
+      _module = eurorack_module_fixture(%{name: "Clouds"})
+
+      zip_path = tmp_zip_path()
+      assert {:ok, ^zip_path} = Inventory.export_backup(zip_path)
+      assert :ok = Inventory.import_backup(zip_path)
+
+      page = Inventory.list_backup_runs()
+      assert page.total == 1
+      assert hd(page.backup_runs).id == history.id
+      assert hd(page.backup_runs).filename == "inventory-keep.zip"
+    end
+
     test "import ersetzt bestehende Preisbeobachtungen durch Backup-Daten" do
       module = eurorack_module_fixture(%{name: "Clouds", manufacturer: "Mutable"})
 

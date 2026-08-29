@@ -12,6 +12,15 @@ defmodule ModuleOMatWeb.Api.Params do
 
   def parse_id(_), do: :error
 
+  def page(params, default \\ 1)
+
+  def page(params, default) when is_map(params) do
+    case Integer.parse(to_string(params["page"] || default)) do
+      {page, ""} when page > 0 -> page
+      _ -> default
+    end
+  end
+
   def filter_opts(params) when is_map(params) do
     types =
       params

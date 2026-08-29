@@ -414,6 +414,7 @@ defmodule ModuleOMat.Inventory.RemoteBackupScheduler do
 
   defp finish_backup(state, {:error, reason}) do
     Logger.error("Nextcloud-Backup-Lauf fehlgeschlagen: #{format_reason(reason)}")
+    maybe_record_unfinished_run(state, reason)
 
     case state.backup_kind do
       :daily ->
@@ -421,6 +422,42 @@ defmodule ModuleOMat.Inventory.RemoteBackupScheduler do
 
       _ ->
         state
+    end
+  end
+
+  # Timeout/Absturz: der Job wurde beendet, bevor RemoteBackup.run dokumentieren konnte.
+  defp maybe_record_unfinished_run(state, :timeout) do
+    record_unfinished_run(state)
+  end
+
+  defp maybe_record_unfinished_run(state, %{__exception__: true}) do
+    record_unfinished_run(state)
+  end
+
+  defp maybe_record_unfinished_run(_state, _reason), do: :ok
+
+  defp record_unfinished_run(state) do
+    filename = RemoteBackup.weekday_filename(state.utc_now.(), state.timezone)
+
+    try do
+      case ModuleOMat.Inventory.record_backup_run(%{
+             filename: filename,
+             size_bytes: nil,
+             success: false
+           }) do
+        {:ok, _} ->
+          :ok
+
+        {:error, changeset} ->
+          Logger.error(
+            "Sicherungshistorie konnte nicht gespeichert werden: #{inspect(changeset.errors)}"
+          )
+      end
+    rescue
+      error ->
+        Logger.error(
+          "Sicherungshistorie konnte nicht gespeichert werden: #{Exception.message(error)}"
+        )
     end
   end
 

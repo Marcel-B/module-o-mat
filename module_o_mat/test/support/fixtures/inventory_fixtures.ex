@@ -68,4 +68,20 @@ defmodule ModuleOMat.InventoryFixtures do
 
     module_type
   end
+
+  @doc """
+  Legt einen dokumentierten Sicherungsversuch an.
+  """
+  def backup_run_fixture(attrs \\ %{}) do
+    {:ok, backup_run} =
+      attrs
+      |> Enum.into(%{
+        filename: "inventory-sat.zip",
+        size_bytes: 12_345,
+        success: true
+      })
+      |> Inventory.record_backup_run()
+
+    backup_run
+  end
 end

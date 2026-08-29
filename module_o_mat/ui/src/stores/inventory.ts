@@ -14,6 +14,8 @@ const emptyFilters = (): ModuleFilters => ({
 export const useInventoryStore = defineStore('inventory', () => {
   const modules = ref<Module[]>([])
   const stats = ref<InventoryStats | null>(null)
+  const lastSuccessAt = ref<string | null>(null)
+  const lastFailureAt = ref<string | null>(null)
   const moduleTypes = ref<ModuleType[]>([])
   const manufacturers = ref<string[]>([])
   const loading = ref(false)
@@ -57,8 +59,19 @@ export const useInventoryStore = defineStore('inventory', () => {
     manufacturers.value = manufacturersPayload.manufacturers || []
   }
 
+  async function fetchBackupStatus(): Promise<void> {
+    try {
+      const data = await api.listBackupHistory(1)
+      lastSuccessAt.value = data.last_success_at ?? null
+      lastFailureAt.value = data.last_failure_at ?? null
+    } catch {
+      lastSuccessAt.value = null
+      lastFailureAt.value = null
+    }
+  }
+
   async function bootstrap(): Promise<void> {
-    await Promise.all([fetchModules(), fetchLookups()])
+    await Promise.all([fetchModules(), fetchLookups(), fetchBackupStatus()])
   }
 
   function setFilters(next: Partial<ModuleFilters>): void {
@@ -162,6 +175,8 @@ export const useInventoryStore = defineStore('inventory', () => {
   return {
     modules,
     stats,
+    lastSuccessAt,
+    lastFailureAt,
     moduleTypes,
     manufacturers,
     loading,
@@ -173,6 +188,7 @@ export const useInventoryStore = defineStore('inventory', () => {
     bootstrap,
     fetchModules,
     fetchLookups,
+    fetchBackupStatus,
     setFilters,
     clearFilters,
     loadModule,
