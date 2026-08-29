@@ -2,15 +2,17 @@
   <PropertyGroup>
     <RootNamespace>ModuleOMat.Api</RootNamespace>
     <SpaRoot>ClientApp\</SpaRoot>
-    <DefaultItemExcludes>$(DefaultItemExcludes);$(SpaRoot)node_modules\**;$(SpaRoot)dist\**</DefaultItemExcludes>
+    <DefaultItemExcludes>$(DefaultItemExcludes);$(SpaRoot)node_modules\**;$(SpaRoot)dist\**;$(SpaRoot).idea\**</DefaultItemExcludes>
     <SkipClientAppBuild Condition="'$(SkipClientAppBuild)' == ''">false</SkipClientAppBuild>
+    <SpaProxyServerUrl>http://localhost:5012</SpaProxyServerUrl>
+    <SpaProxyLaunchCommand>npm run dev</SpaProxyLaunchCommand>
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="$(SpaRoot)**" />
     <Content Remove="$(SpaRoot)**" />
     <EmbeddedResource Remove="$(SpaRoot)**" />
     <None Remove="$(SpaRoot)**" />
-    <TypeScriptCompile Remove="$(SpaRoot)**" />
+    <None Include="$(SpaRoot)**" Exclude="$(SpaRoot)node_modules\**;$(SpaRoot)dist\**;$(SpaRoot).idea\**" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ModuleOMat.Domain\ModuleOMat.Domain.csproj" />
@@ -18,7 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.0" />
-    <PackageReference Include="Microsoft.AspNetCore.SpaServices.Extensions" Version="10.0.11" />
+    <PackageReference Include="Microsoft.AspNetCore.SpaProxy" Version="10.0.11" />
     <PackageReference Include="Microsoft.OpenApi" Version="2.7.5" />
     <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="9.0.4" />
   </ItemGroup>

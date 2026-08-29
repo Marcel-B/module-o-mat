@@ -76,7 +76,6 @@ if (vueDev)
             branch.UseStaticFiles();
         });
     app.UseWebSockets();
-    app.UseVueDevelopmentServer();
 }
 else
 {

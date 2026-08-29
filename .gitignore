@@ -27,6 +27,7 @@ TestResults/
 *.db
 *.db-shm
 *.db-wal
+node_modules/
 dotnet/**/data/
 dotnet/**/uploads/
 dotnet/src/ModuleOMat.Api/wwwroot/ui/
