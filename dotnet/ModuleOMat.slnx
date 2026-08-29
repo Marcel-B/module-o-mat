@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ModuleOMat.Api/ModuleOMat.Api.csproj" />
+    <Project Path="src/ModuleOMat.Cli/ModuleOMat.Cli.csproj" />
+    <Project Path="src/ModuleOMat.Domain/ModuleOMat.Domain.csproj" />
+    <Project Path="src/ModuleOMat.Infrastructure/ModuleOMat.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ModuleOMat.Api.Tests/ModuleOMat.Api.Tests.csproj" />
+    <Project Path="tests/ModuleOMat.Domain.Tests/ModuleOMat.Domain.Tests.csproj" />
+  </Folder>
+</Solution>

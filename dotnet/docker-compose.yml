@@ -1,0 +1,25 @@
+services:
+  web:
+    build:
+      context: ..
+      dockerfile: dotnet/Dockerfile
+    ports:
+      - "${PORT:-5012}:8080"
+    environment:
+      PORT: "8080"
+      DATABASE_PATH: /data/module_o_mat.db
+      MANUAL_UPLOADS_DIR: /data/uploads/manuals
+      NEXTCLOUD_BACKUP_ENABLED: ${NEXTCLOUD_BACKUP_ENABLED:-false}
+      NEXTCLOUD_WEBDAV_URL: ${NEXTCLOUD_WEBDAV_URL:-}
+      NEXTCLOUD_USERNAME: ${NEXTCLOUD_USERNAME:-}
+      NEXTCLOUD_APP_PASSWORD: ${NEXTCLOUD_APP_PASSWORD:-}
+      NEXTCLOUD_BACKUP_AT: ${NEXTCLOUD_BACKUP_AT:-03:00}
+      NEXTCLOUD_BACKUP_TIMEZONE: ${NEXTCLOUD_BACKUP_TIMEZONE:-Europe/Berlin}
+      NEXTCLOUD_BACKUP_IDLE_MINUTES: ${NEXTCLOUD_BACKUP_IDLE_MINUTES:-10}
+      NEXTCLOUD_BACKUP_HTTP_TIMEOUT_SECONDS: ${NEXTCLOUD_BACKUP_HTTP_TIMEOUT_SECONDS:-300}
+    volumes:
+      - module_o_mat_dotnet_data:/data
+    restart: unless-stopped
+
+volumes:
+  module_o_mat_dotnet_data:

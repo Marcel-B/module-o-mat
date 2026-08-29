@@ -106,7 +106,7 @@ jobs:
     runs-on: ubuntu-24.04
     defaults:
       run:
-        working-directory: module_o_mat/ui
+        working-directory: dotnet/src/ModuleOMat.Api/ClientApp
 
     steps:
       - name: Code auschecken
@@ -117,7 +117,7 @@ jobs:
         with:
           node-version: "22"
           cache: npm
-          cache-dependency-path: module_o_mat/ui/package-lock.json
+          cache-dependency-path: dotnet/src/ModuleOMat.Api/ClientApp/package-lock.json
 
       - name: Abhaengigkeiten installieren
         run: npm ci
@@ -157,6 +157,27 @@ jobs:
 
       - name: Produktions-Build
         run: npm run build
+
+  dotnet:
+    name: .NET Build & Test
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: dotnet
+    steps:
+      - name: Code auschecken
+        uses: actions/checkout@v4
+
+      - name: .NET 10 einrichten
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Wiederherstellen, bauen und testen
+        run: |
+          dotnet restore
+          dotnet build --no-restore --warnaserror
+          dotnet test --no-build --verbosity normal
 
   pages:
     name: Docs & Coverage veroeffentlichen
@@ -283,7 +304,49 @@ jobs:
       - name: Image bauen und pushen
         uses: docker/build-push-action@v6
         with:
-          context: module_o_mat
+          context: .
+          file: module_o_mat/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  docker-dotnet:
+    name: .NET Docker Image nach GHCR
+    needs: [dotnet, ui, ui-alt]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Code auschecken
+        uses: actions/checkout@v4
+
+      - name: Image-Namen (Kleinbuchstaben) setzen
+        run: echo "IMAGE_NAME=ghcr.io/$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')/module-o-mat-dotnet" >> "$GITHUB_ENV"
+
+      - name: Image-Tags ermitteln
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest
+            type=sha,prefix=
+
+      - name: Bei GHCR anmelden
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Image bauen und pushen
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: dotnet/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

@@ -2,7 +2,8 @@ defmodule Mix.Tasks.Assets.BuildVue do
   @shortdoc "Baut die Vue-UIs nach priv/vue"
 
   @moduledoc """
-  Installiert Dependencies und baut `ui` sowie `ui-alt` nach `priv/vue`.
+  Installiert Dependencies und baut die PrimeVue-UI (dotnet ClientApp)
+  sowie `ui-alt` nach `priv/vue`.
 
   Phoenix liefert die fertigen SPAs unter `/ui` und `/ui-alt` aus.
 
@@ -13,17 +14,22 @@ defmodule Mix.Tasks.Assets.BuildVue do
 
   @impl Mix.Task
   def run(_args) do
-    build("ui")
-    build("ui-alt")
+    ui = Path.expand("../dotnet/src/ModuleOMat.Api/ClientApp")
+    build(ui, "ui")
+    build("ui-alt", "ui-alt")
   end
 
-  defp build(src) do
+  defp build(src, dest_name) do
     Mix.shell().info("Vue-UI bauen: #{src}")
+
+    unless File.dir?(src) do
+      Mix.raise("Vue-Quelle fehlt: #{src}")
+    end
 
     npm!(src, ["ci"])
     npm!(src, ["run", "build"])
 
-    dest = Path.join(["priv", "vue", src])
+    dest = Path.join(["priv", "vue", dest_name])
     File.rm_rf!(dest)
     File.mkdir_p!(Path.dirname(dest))
     File.cp_r!(Path.join(src, "dist"), dest)

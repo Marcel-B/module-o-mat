@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>module-O-mat</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0b0d12;
+        --card: #11141c;
+        --ink: #e8f7f0;
+        --muted: #8aa396;
+        --line: #243028;
+        --accent: #2ee6a0;
+        --accent-ink: #052e1c;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Share Tech Mono", "Segoe UI", system-ui, sans-serif;
+        background:
+          radial-gradient(900px 420px at 12% -20%, rgba(46, 230, 160, 0.16), transparent),
+          var(--bg);
+        color: var(--ink);
+      }
+      main {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 4rem 1.5rem 5rem;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 0.85rem;
+        margin: 0 0 1.5rem;
+      }
+      .brand img {
+        width: 3.25rem;
+        height: 3.25rem;
+      }
+      .kicker {
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: var(--accent);
+        margin: 0;
+      }
+      h1 {
+        font-size: clamp(2rem, 4vw, 2.75rem);
+        letter-spacing: -0.03em;
+        margin: 0 0 0.75rem;
+      }
+      .lede {
+        max-width: 40rem;
+        color: var(--muted);
+        line-height: 1.6;
+        margin: 0 0 2.5rem;
+      }
+      .grid {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      }
+      article {
+        background: var(--card);
+        border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line));
+        border-radius: 1.25rem;
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        min-height: 100%;
+        box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 16%, transparent);
+        transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+      }
+      article:hover {
+        transform: translateY(-4px);
+        border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+        box-shadow: 0 0 28px color-mix(in srgb, var(--accent) 18%, transparent);
+      }
+      .badge {
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--accent);
+      }
+      h2 {
+        margin: 0.35rem 0 0.75rem;
+        font-size: 1.35rem;
+      }
+      p {
+        color: var(--muted);
+        line-height: 1.55;
+        margin: 0;
+        flex: 1;
+      }
+      a.button {
+        display: block;
+        margin-top: 1.4rem;
+        text-align: center;
+        text-decoration: none;
+        background: var(--accent);
+        color: var(--accent-ink);
+        border-radius: 999px;
+        padding: 0.75rem 1rem;
+        font-weight: 650;
+        transition: filter 160ms ease;
+      }
+      a.button:hover { filter: brightness(1.06); }
+      .docs {
+        margin-top: 2rem;
+        font-size: 0.95rem;
+      }
+      .docs a { color: var(--accent); }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="brand">
+        <img src="/logo.svg" width="52" height="52" alt="" />
+        <p class="kicker">module-O-mat</p>
+      </div>
+      <h1>Welche Oberfläche möchtest du nutzen?</h1>
+      <p class="lede">
+        Zwei Vue-Oberflächen, ein Inventar. Beide sprechen dieselbe JSON-API unter
+        <code>/api/v1</code> an.
+      </p>
+      <div class="grid">
+        <article id="ui-choice-vue-card">
+          <span class="badge">Vue 3</span>
+          <h2>PrimeVue UI</h2>
+          <p>Fertige SPA mit PrimeVue, VeeValidate und Pinia. Suche, Filter, Preisverlauf und Backup inklusive.</p>
+          <a class="button" id="ui-choice-vue" href="/ui">Vue UI öffnen</a>
+        </article>
+        <article id="ui-choice-vue-alt-card">
+          <span class="badge">Vue 3</span>
+          <h2>Alternative UI</h2>
+          <p>Zweite Vue-Implementierung auf demselben Stack. Ideal zum Vergleichen oder Weiterbauen.</p>
+          <a class="button" id="ui-choice-vue-alt" href="/ui-alt">Alternative UI öffnen</a>
+        </article>
+      </div>
+      <p class="docs"><a href="/api/docs">OpenAPI / Swagger</a></p>
+    </main>
+  </body>
+</html>

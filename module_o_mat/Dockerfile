@@ -16,6 +16,8 @@
 # (such as DNS resolution failures, and dynamically linked NIFs/precompiled binaries).
 #
 # For finding packages in Debian, search on https://packages.debian.org/.
+#
+# Build context is the Git repository root (see docker-compose.yml / CI).
 
 ARG ELIXIR_VERSION=1.20.3
 ARG OTP_VERSION=29.0.5
@@ -26,16 +28,16 @@ ARG RUNNER_IMAGE="docker.io/debian:${DEBIAN_VERSION}"
 
 FROM node:22-bookworm-slim AS vue-ui
 WORKDIR /src
-COPY ui/package.json ui/package-lock.json ./
+COPY dotnet/src/ModuleOMat.Api/ClientApp/package.json dotnet/src/ModuleOMat.Api/ClientApp/package-lock.json ./
 RUN npm ci
-COPY ui/ ./
+COPY dotnet/src/ModuleOMat.Api/ClientApp ./
 RUN npm run build && mv dist /out
 
 FROM node:22-bookworm-slim AS vue-ui-alt
 WORKDIR /src
-COPY ui-alt/package.json ui-alt/package-lock.json ./
+COPY module_o_mat/ui-alt/package.json module_o_mat/ui-alt/package-lock.json ./
 RUN npm ci
-COPY ui-alt/ ./
+COPY module_o_mat/ui-alt ./
 RUN npm run build && mv dist /out
 
 FROM ${BUILDER_IMAGE} AS builder
@@ -56,37 +58,37 @@ RUN mix local.hex --force \
 ENV MIX_ENV="prod"
 
 # install mix dependencies
-COPY mix.exs mix.lock ./
+COPY module_o_mat/mix.exs module_o_mat/mix.lock ./
 RUN mix deps.get --only $MIX_ENV
 RUN mkdir config
 
 # copy compile-time config files before we compile dependencies
 # to ensure any relevant config change will trigger the dependencies
 # to be re-compiled.
-COPY config/config.exs config/${MIX_ENV}.exs config/
+COPY module_o_mat/config/config.exs module_o_mat/config/${MIX_ENV}.exs config/
 RUN mix deps.compile
 
 RUN mix assets.setup
 
-COPY priv priv
+COPY module_o_mat/priv priv
 
 COPY --from=vue-ui /out priv/vue/ui
 COPY --from=vue-ui-alt /out priv/vue/ui-alt
 
-COPY lib lib
+COPY module_o_mat/lib lib
 
 # Compile the release
 RUN mix compile
 
-COPY assets assets
+COPY module_o_mat/assets assets
 
 # compile assets
 RUN mix assets.deploy
 
 # Changes to config/runtime.exs don't require recompiling the code
-COPY config/runtime.exs config/
+COPY module_o_mat/config/runtime.exs config/
 
-COPY rel rel
+COPY module_o_mat/rel rel
 RUN mix release
 
 # start a new build stage so that the final image will only contain
