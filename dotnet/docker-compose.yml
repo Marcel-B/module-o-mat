@@ -5,6 +5,8 @@ services:
       dockerfile: dotnet/Dockerfile
     ports:
       - "${PORT:-5012}:8080"
+    env_file:
+      - .env
     environment:
       PORT: "8080"
       DATABASE_PATH: /data/module_o_mat.db

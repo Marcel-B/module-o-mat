@@ -35,28 +35,7 @@ var storage = new StorageOptions
         ?? "data/uploads/manuals"
 };
 
-var nextcloud = new NextcloudOptions
-{
-    Enabled = builder.Configuration.GetValue("Nextcloud:Enabled", EnvBool("NEXTCLOUD_BACKUP_ENABLED", false)),
-    WebDavUrl = builder.Configuration["Nextcloud:WebDavUrl"]
-        ?? Environment.GetEnvironmentVariable("NEXTCLOUD_WEBDAV_URL"),
-    Username = builder.Configuration["Nextcloud:Username"]
-        ?? Environment.GetEnvironmentVariable("NEXTCLOUD_USERNAME"),
-    AppPassword = builder.Configuration["Nextcloud:AppPassword"]
-        ?? Environment.GetEnvironmentVariable("NEXTCLOUD_APP_PASSWORD"),
-    BackupAt = builder.Configuration["Nextcloud:BackupAt"]
-        ?? Environment.GetEnvironmentVariable("NEXTCLOUD_BACKUP_AT")
-        ?? "03:00",
-    Timezone = builder.Configuration["Nextcloud:Timezone"]
-        ?? Environment.GetEnvironmentVariable("NEXTCLOUD_BACKUP_TIMEZONE")
-        ?? "Europe/Berlin",
-    IdleMinutes = builder.Configuration.GetValue(
-        "Nextcloud:IdleMinutes",
-        EnvInt("NEXTCLOUD_BACKUP_IDLE_MINUTES", 10)),
-    HttpTimeoutSeconds = builder.Configuration.GetValue(
-        "Nextcloud:HttpTimeoutSeconds",
-        EnvInt("NEXTCLOUD_BACKUP_HTTP_TIMEOUT_SECONDS", 300))
-};
+var nextcloud = NextcloudOptions.Load(builder.Configuration);
 
 builder.Services.AddModuleOMatInfrastructure(storage, nextcloud);
 builder.Services.AddHostedService<ModuleOMat.Infrastructure.Scheduling.RemoteBackupScheduler>();
@@ -94,16 +73,5 @@ app.MapInventoryApi();
 app.MapSpaFallback(serveBuiltUi: !vueDev);
 
 app.Run();
-
-static bool EnvBool(string name, bool fallback)
-{
-    var value = Environment.GetEnvironmentVariable(name);
-    return value is null
-        ? fallback
-        : value is "true" or "1" or "TRUE" or "yes";
-}
-
-static int EnvInt(string name, int fallback) =>
-    int.TryParse(Environment.GetEnvironmentVariable(name), out var parsed) ? parsed : fallback;
 
 public partial class Program;

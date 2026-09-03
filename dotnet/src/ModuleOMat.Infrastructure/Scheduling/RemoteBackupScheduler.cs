@@ -23,11 +23,7 @@ public sealed class RemoteBackupScheduler(
     private long? _lastFailureMs;
     private bool _pendingAfterChange;
 
-    private bool Enabled =>
-        options.Enabled &&
-        !string.IsNullOrWhiteSpace(options.WebDavUrl) &&
-        !string.IsNullOrWhiteSpace(options.Username) &&
-        !string.IsNullOrWhiteSpace(options.AppPassword);
+    private bool Enabled => options.IsConfigured;
 
     private TimeZoneInfo TimeZone => TimeZoneInfo.FindSystemTimeZoneById(options.Timezone);
 
@@ -39,7 +35,7 @@ public sealed class RemoteBackupScheduler(
     {
         if (!Enabled)
         {
-            logger.LogInformation("Nextcloud-Backup-Scheduler deaktiviert");
+            logger.LogInformation("Nextcloud-Backup-Scheduler deaktiviert ({Reason})", options.DisableReason);
             return;
         }
 
