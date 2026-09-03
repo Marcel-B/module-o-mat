@@ -24,15 +24,7 @@ var storage = new StorageOptions
     DatabasePath = Environment.GetEnvironmentVariable("DATABASE_PATH") ?? "data/module_o_mat.db",
     ManualUploadsDir = Environment.GetEnvironmentVariable("MANUAL_UPLOADS_DIR") ?? "data/uploads/manuals"
 };
-var nextcloud = new NextcloudOptions
-{
-    Enabled = Environment.GetEnvironmentVariable("NEXTCLOUD_BACKUP_ENABLED") is "true" or "1",
-    WebDavUrl = Environment.GetEnvironmentVariable("NEXTCLOUD_WEBDAV_URL"),
-    Username = Environment.GetEnvironmentVariable("NEXTCLOUD_USERNAME"),
-    AppPassword = Environment.GetEnvironmentVariable("NEXTCLOUD_APP_PASSWORD"),
-    BackupAt = Environment.GetEnvironmentVariable("NEXTCLOUD_BACKUP_AT") ?? "03:00",
-    Timezone = Environment.GetEnvironmentVariable("NEXTCLOUD_BACKUP_TIMEZONE") ?? "Europe/Berlin"
-};
+var nextcloud = NextcloudOptions.Load(builder.Configuration);
 
 builder.Services.AddModuleOMatInfrastructure(storage, nextcloud);
 
