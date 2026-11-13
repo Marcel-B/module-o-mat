@@ -31,4 +31,3 @@ node_modules/
 dotnet/**/data/
 dotnet/**/uploads/
 dotnet/src/ModuleOMat.Api/wwwroot/ui/
-dotnet/src/ModuleOMat.Api/wwwroot/ui-alt/

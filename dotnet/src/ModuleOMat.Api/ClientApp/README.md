@@ -20,8 +20,6 @@ npm install
 npm run dev
 ```
 
-Phoenix kann denselben Stand nach `mix assets.build_vue` unter `/ui` ausliefern.
-
 ## Tests
 
 ```bash

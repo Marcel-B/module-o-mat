@@ -35,17 +35,4 @@
       </ResolvedFileToPublish>
     </ItemGroup>
   </Target>
-  <Target Name="CopyVueAlt" AfterTargets="Build">
-    <PropertyGroup>
-      <VueAltSource Condition="Exists('$(MSBuildThisFileDirectory)..\..\..\module_o_mat\priv\vue\ui-alt\index.html')">$(MSBuildThisFileDirectory)..\..\..\module_o_mat\priv\vue\ui-alt</VueAltSource>
-      <VueAltSource Condition="'$(VueAltSource)' == '' And Exists('$(MSBuildThisFileDirectory)..\..\..\module_o_mat\ui-alt\dist\index.html')">$(MSBuildThisFileDirectory)..\..\..\module_o_mat\ui-alt\dist</VueAltSource>
-    </PropertyGroup>
-    <MakeDir Directories="$(MSBuildThisFileDirectory)wwwroot\ui-alt" Condition="'$(VueAltSource)' != ''" />
-    <MakeDir Directories="$(OutputPath)wwwroot\ui-alt" Condition="'$(VueAltSource)' != ''" />
-    <ItemGroup>
-      <_VueAltFiles Include="$(VueAltSource)\**\*" Condition="'$(VueAltSource)' != ''" />
-    </ItemGroup>
-    <Copy SourceFiles="@(_VueAltFiles)" DestinationFolder="$(MSBuildThisFileDirectory)wwwroot\ui-alt\%(RecursiveDir)" SkipUnchangedFiles="true" Condition="'$(VueAltSource)' != ''" />
-    <Copy SourceFiles="@(_VueAltFiles)" DestinationFolder="$(OutputPath)wwwroot\ui-alt\%(RecursiveDir)" SkipUnchangedFiles="true" Condition="'$(VueAltSource)' != ''" />
-  </Target>
 </Project>

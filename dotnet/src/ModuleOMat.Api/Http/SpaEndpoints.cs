@@ -11,11 +11,6 @@ public static class SpaEndpoints
             app.MapGet("/ui", (HttpContext context) => ServeSpa(context, "ui"))
                 .ExcludeFromDescription();
         }
-
-        app.MapGet("/ui-alt/{**path}", (HttpContext context) => ServeSpa(context, "ui-alt"))
-            .ExcludeFromDescription();
-        app.MapGet("/ui-alt", (HttpContext context) => ServeSpa(context, "ui-alt"))
-            .ExcludeFromDescription();
         return app;
     }
 
@@ -43,7 +38,7 @@ public static class SpaEndpoints
         }
 
         return Results.Json(
-            new { error = $"Die Oberflaeche \"{name}\" wurde noch nicht gebaut. {(name == "ui" ? "Lokal: npm run build in src/ModuleOMat.Api/ClientApp." : "Lokal: npm run build in module_o_mat/ui-alt.")}" },
+            new { error = $"Die Oberflaeche \"{name}\" wurde noch nicht gebaut. Lokal: npm run build in src/ModuleOMat.Api/ClientApp." },
             statusCode: StatusCodes.Status503ServiceUnavailable);
     }
 

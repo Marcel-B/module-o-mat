@@ -256,9 +256,7 @@ public class InventoryApiTests : IDisposable
     public async Task Spa_routes_are_registered()
     {
         var ui = await _client.GetAsync("/ui");
-        var alt = await _client.GetAsync("/ui-alt/inventory");
         Assert.True(ui.StatusCode is HttpStatusCode.OK or HttpStatusCode.ServiceUnavailable);
-        Assert.True(alt.StatusCode is HttpStatusCode.OK or HttpStatusCode.ServiceUnavailable);
         if (ui.StatusCode == HttpStatusCode.ServiceUnavailable)
         {
             var body = await ui.Content.ReadFromJsonAsync<JsonElement>(Json);
