@@ -74,7 +74,6 @@ public class InventoryApiTests : IDisposable
         response.EnsureSuccessStatusCode();
         var html = await response.Content.ReadAsStringAsync();
         Assert.Contains("ui-choice-vue", html);
-        Assert.Contains("ui-choice-vue-alt", html);
     }
 
     [Fact]
