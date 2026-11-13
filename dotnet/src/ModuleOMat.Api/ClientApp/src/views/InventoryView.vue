@@ -82,7 +82,7 @@ onMounted(async () => {
     await store.bootstrap()
     await loadRoutedModule()
   } catch (error) {
-    notifyError(error, 'Daten konnten nicht geladen werden. Läuft die Phoenix-API auf Port 4000?')
+    notifyError(error, 'Daten konnten nicht geladen werden. Läuft die API?')
   }
 })
 
