@@ -20,6 +20,7 @@ declare module 'vue' {
     Chip: typeof import('primevue/chip')['default']
     ConfirmDialog: typeof import('primevue/confirmdialog')['default']
     Dialog: typeof import('primevue/dialog')['default']
+    Dropdown: typeof import('primevue/dropdown')['default']
     FileUpload: typeof import('primevue/fileupload')['default']
     FloatLabel: typeof import('primevue/floatlabel')['default']
     HeaderScope: typeof import('./src/components/HeaderScope.vue')['default']
