@@ -1,0 +1,45 @@
+# Betrieb auf dem Host: zieht das CI-Image aus GHCR statt lokal zu bauen.
+# Watchtower prüft alle 5 Minuten, ob es ein neues :latest gibt, und startet
+# dann nur diesen Container neu (Label-Filter, andere Container bleiben unberührt).
+#
+#   docker compose -f docker-compose.host.yml up -d
+services:
+  web:
+    image: ghcr.io/marcel-b/module-o-mat-dotnet:latest
+    container_name: module-o-mat-dotnet
+    ports:
+      - "${PORT:-5012}:8080"
+    env_file:
+      - .env
+    environment:
+      PORT: "8080"
+      DATABASE_PATH: /data/module_o_mat.db
+      MANUAL_UPLOADS_DIR: /data/uploads/manuals
+      NEXTCLOUD_BACKUP_ENABLED: ${NEXTCLOUD_BACKUP_ENABLED:-false}
+      NEXTCLOUD_WEBDAV_URL: ${NEXTCLOUD_WEBDAV_URL:-}
+      NEXTCLOUD_USERNAME: ${NEXTCLOUD_USERNAME:-}
+      NEXTCLOUD_APP_PASSWORD: ${NEXTCLOUD_APP_PASSWORD:-}
+      NEXTCLOUD_BACKUP_AT: ${NEXTCLOUD_BACKUP_AT:-03:00}
+      NEXTCLOUD_BACKUP_TIMEZONE: ${NEXTCLOUD_BACKUP_TIMEZONE:-Europe/Berlin}
+      NEXTCLOUD_BACKUP_IDLE_MINUTES: ${NEXTCLOUD_BACKUP_IDLE_MINUTES:-10}
+      NEXTCLOUD_BACKUP_HTTP_TIMEOUT_SECONDS: ${NEXTCLOUD_BACKUP_HTTP_TIMEOUT_SECONDS:-300}
+    volumes:
+      - module_o_mat_dotnet_data:/data
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
+    restart: unless-stopped
+
+  watchtower:
+    image: containrrr/watchtower:1.7.1
+    container_name: module-o-mat-watchtower
+    command: --label-enable --cleanup --interval ${WATCHTOWER_INTERVAL:-300}
+    environment:
+      TZ: Europe/Berlin
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Nur nötig, wenn das GHCR-Paket privat ist (vorher `docker login ghcr.io`):
+      # - ~/.docker/config.json:/config.json:ro
+    restart: unless-stopped
+
+volumes:
+  module_o_mat_dotnet_data:
