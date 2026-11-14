@@ -20,6 +20,19 @@ if ! docker inspect "$OLD" >/dev/null 2>&1; then
   exit 1
 fi
 
+# Läuft der Container schon per Compose aus dem GHCR-Image, reicht ein Watchtower
+# daneben, der genau diesen Container beobachtet. Am Compose-Setup ändert sich nichts.
+CUR_IMAGE=$(docker inspect -f '{{.Config.Image}}' "$OLD")
+if [ "$CUR_IMAGE" = "$IMAGE" ]; then
+  echo "'$OLD' nutzt bereits $IMAGE, starte nur Watchtower dafür."
+  docker rm -f module-o-mat-watchtower >/dev/null 2>&1 || true
+  docker run -d --name module-o-mat-watchtower --restart unless-stopped \
+    -e TZ=Europe/Berlin -v /var/run/docker.sock:/var/run/docker.sock \
+    containrrr/watchtower:1.7.1 --cleanup --interval "${WATCHTOWER_INTERVAL:-300}" "$OLD"
+  echo "Fertig. Watchtower-Log: docker logs -f module-o-mat-watchtower"
+  exit 0
+fi
+
 # /data-Mount des alten Containers ermitteln
 MTYPE=$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "/data"}}{{.Type}}{{end}}{{end}}' "$OLD")
 MSRC=$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "/data"}}{{if eq .Type "volume"}}{{.Name}}{{else}}{{.Source}}{{end}}{{end}}{{end}}' "$OLD")
