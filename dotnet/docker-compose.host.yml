@@ -35,6 +35,8 @@ services:
     command: --label-enable --cleanup --interval ${WATCHTOWER_INTERVAL:-300}
     environment:
       TZ: Europe/Berlin
+      # Watchtower 1.7.1 spricht sonst API 1.25, die Docker 29+ ablehnt
+      DOCKER_API_VERSION: "1.44"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       # Nur nötig, wenn das GHCR-Paket privat ist (vorher `docker login ghcr.io`):

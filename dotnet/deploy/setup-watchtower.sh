@@ -27,7 +27,7 @@ if [ "$CUR_IMAGE" = "$IMAGE" ]; then
   echo "'$OLD' nutzt bereits $IMAGE, starte nur Watchtower dafür."
   docker rm -f module-o-mat-watchtower >/dev/null 2>&1 || true
   docker run -d --name module-o-mat-watchtower --restart unless-stopped \
-    -e TZ=Europe/Berlin -v /var/run/docker.sock:/var/run/docker.sock \
+    -e TZ=Europe/Berlin -e DOCKER_API_VERSION=1.44 -v /var/run/docker.sock:/var/run/docker.sock \
     containrrr/watchtower:1.7.1 --cleanup --interval "${WATCHTOWER_INTERVAL:-300}" "$OLD"
   echo "Fertig. Watchtower-Log: docker logs -f module-o-mat-watchtower"
   exit 0
@@ -98,6 +98,8 @@ $VOLLINE
     command: --label-enable --cleanup --interval \${WATCHTOWER_INTERVAL:-300}
     environment:
       TZ: Europe/Berlin
+      # Watchtower 1.7.1 spricht sonst API 1.25, die Docker 29+ ablehnt
+      DOCKER_API_VERSION: "1.44"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     restart: unless-stopped
