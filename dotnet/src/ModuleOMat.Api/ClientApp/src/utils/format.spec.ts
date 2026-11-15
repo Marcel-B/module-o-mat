@@ -5,6 +5,7 @@ import {
   formatDateTime,
   formatEuro,
   formatEuroRange,
+  formatHpCm,
   formatHpWidth,
   groupModules,
   priceRangeTitle,
@@ -123,5 +124,12 @@ describe('routeParam', () => {
 
   it('liefert einen leeren String ohne Wert', () => {
     expect(routeParam(undefined)).toBe('')
+  })
+})
+
+describe('formatHpCm', () => {
+  it('rechnet HP in cm um', () => {
+    expect(formatHpCm(165)).toBe('83,8 cm')
+    expect(formatHpCm(0)).toBe('0,0 cm')
   })
 })

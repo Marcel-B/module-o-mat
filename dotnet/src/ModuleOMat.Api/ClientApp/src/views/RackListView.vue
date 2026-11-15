@@ -7,6 +7,7 @@ import { ApiError } from '../api/client'
 import { listModules } from '../api/inventory'
 import { createRack, deleteRack, listRacks } from '../api/racks'
 import type { Module, Rack } from '../types'
+import { formatHpCm } from '../utils/format'
 import { RAILS, isOverloaded, psuCapacity, sumDraw, milliampsToAmps } from '../utils/power'
 
 const router = useRouter()
@@ -170,7 +171,7 @@ function askDelete(rack: Rack) {
         </div>
         <div class="text-sm text-surface-600">
           {{ rackSummary(rack).count }} {{ rackSummary(rack).count === 1 ? 'Modul' : 'Module' }} ·
-          {{ rackSummary(rack).hp }} HP
+          {{ rackSummary(rack).hp }} HP ({{ formatHpCm(rackSummary(rack).hp) }})
         </div>
         <div class="text-xs text-surface-600">{{ psuText(rack) }}</div>
         <div class="mt-auto flex justify-end gap-1">

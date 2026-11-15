@@ -7,7 +7,7 @@ import { ApiError } from '../api/client'
 import { listModules } from '../api/inventory'
 import { deleteRack, getRack, listRacks, updateRack } from '../api/racks'
 import type { Module, Rack, RackPayload } from '../types'
-import { routeParam } from '../utils/format'
+import { formatHpCm, routeParam } from '../utils/format'
 import {
   RAILS,
   type RailKey,
@@ -275,7 +275,7 @@ function askDelete() {
         <div class="flex items-center gap-2">
           <i v-if="saving" class="pi pi-spin pi-spinner text-surface-500" aria-label="Speichert" />
           <span class="text-sm text-surface-600">
-            {{ rackModules.length }} {{ rackModules.length === 1 ? 'Modul' : 'Module' }} · {{ totalHp }} HP
+            {{ rackModules.length }} {{ rackModules.length === 1 ? 'Modul' : 'Module' }} · {{ totalHp }} HP ({{ formatHpCm(totalHp) }})
           </span>
           <Button icon="pi pi-trash" severity="danger" text rounded aria-label="Rack löschen" @click="askDelete" />
         </div>
