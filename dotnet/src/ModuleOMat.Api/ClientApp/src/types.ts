@@ -169,3 +169,30 @@ export type ApiErrorBody = {
   error?: string
   details?: Record<string, string[] | string> | null
 }
+
+export type Rack = {
+  id: number
+  name: string
+  psu_plus12v_ma: number | null
+  psu_minus12v_ma: number | null
+  psu_plus5v_ma: number | null
+  module_ids: number[]
+  inserted_at: string
+  updated_at: string
+}
+
+export type RackPayload = {
+  name: string
+  psu_plus12v_ma: number | null
+  psu_minus12v_ma: number | null
+  psu_plus5v_ma: number | null
+  module_ids: number[]
+}
+
+export type RackListResponse = {
+  racks: Rack[]
+}
+
+export type RackResponse = {
+  rack: Rack
+}

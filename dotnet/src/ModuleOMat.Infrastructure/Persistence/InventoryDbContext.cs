@@ -11,6 +11,8 @@ public sealed class InventoryDbContext(DbContextOptions<InventoryDbContext> opti
     public DbSet<YoutubeVideoEntity> YoutubeVideos => Set<YoutubeVideoEntity>();
     public DbSet<PriceObservationEntity> PriceObservations => Set<PriceObservationEntity>();
     public DbSet<BackupRunEntity> BackupRuns => Set<BackupRunEntity>();
+    public DbSet<RackEntity> Racks => Set<RackEntity>();
+    public DbSet<RackModuleEntity> RackModules => Set<RackModuleEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -115,7 +117,61 @@ public sealed class InventoryDbContext(DbContextOptions<InventoryDbContext> opti
             entity.HasIndex(e => e.InsertedAt);
             entity.HasIndex(e => new { e.Success, e.InsertedAt });
         });
+
+        modelBuilder.Entity<RackEntity>(entity =>
+        {
+            entity.ToTable("racks");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.Name).HasColumnName("name").IsRequired();
+            entity.Property(e => e.PsuPlus12VMa).HasColumnName("psu_plus12v_ma");
+            entity.Property(e => e.PsuMinus12VMa).HasColumnName("psu_minus12v_ma");
+            entity.Property(e => e.PsuPlus5VMa).HasColumnName("psu_plus5v_ma");
+            entity.Property(e => e.InsertedAt).HasColumnName("inserted_at").IsRequired();
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").IsRequired();
+            entity.HasMany(e => e.Modules)
+                .WithOne(m => m.Rack)
+                .HasForeignKey(m => m.RackId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Bewusst ohne Fremdschluessel auf eurorack_modules: ein Backup-Import ersetzt alle Module
+        // und darf dabei die Rack-Planung nicht mitloeschen. Geloeschte Module werden beim Lesen ausgefiltert.
+        modelBuilder.Entity<RackModuleEntity>(entity =>
+        {
+            entity.ToTable("rack_modules");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.RackId).HasColumnName("rack_id").IsRequired();
+            entity.Property(e => e.EurorackModuleId).HasColumnName("eurorack_module_id").IsRequired();
+            entity.Property(e => e.Position).HasColumnName("position").IsRequired();
+            entity.HasIndex(e => e.RackId);
+        });
     }
+
+    /// <summary>
+    /// EnsureCreated legt in bestehenden Datenbanken keine neuen Tabellen an.
+    /// Dieses Skript ergaenzt spaeter hinzugekommene Tabellen idempotent.
+    /// </summary>
+    public const string AdditiveSchemaSql = """
+        CREATE TABLE IF NOT EXISTS "racks" (
+            "id" INTEGER NOT NULL CONSTRAINT "PK_racks" PRIMARY KEY AUTOINCREMENT,
+            "name" TEXT NOT NULL,
+            "psu_plus12v_ma" INTEGER NULL,
+            "psu_minus12v_ma" INTEGER NULL,
+            "psu_plus5v_ma" INTEGER NULL,
+            "inserted_at" TEXT NOT NULL,
+            "updated_at" TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS "rack_modules" (
+            "id" INTEGER NOT NULL CONSTRAINT "PK_rack_modules" PRIMARY KEY AUTOINCREMENT,
+            "rack_id" INTEGER NOT NULL,
+            "eurorack_module_id" INTEGER NOT NULL,
+            "position" INTEGER NOT NULL,
+            CONSTRAINT "FK_rack_modules_racks_rack_id" FOREIGN KEY ("rack_id") REFERENCES "racks" ("id") ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS "IX_rack_modules_rack_id" ON "rack_modules" ("rack_id");
+        """;
 }
 
 public sealed class EurorackModuleEntity
@@ -187,4 +243,25 @@ public sealed class BackupRunEntity
     public bool Success { get; set; }
     public DateTime InsertedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+}
+
+public sealed class RackEntity
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public int? PsuPlus12VMa { get; set; }
+    public int? PsuMinus12VMa { get; set; }
+    public int? PsuPlus5VMa { get; set; }
+    public DateTime InsertedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+    public List<RackModuleEntity> Modules { get; set; } = [];
+}
+
+public sealed class RackModuleEntity
+{
+    public int Id { get; set; }
+    public int RackId { get; set; }
+    public int EurorackModuleId { get; set; }
+    public int Position { get; set; }
+    public RackEntity? Rack { get; set; }
 }

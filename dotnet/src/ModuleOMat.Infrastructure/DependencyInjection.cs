@@ -39,6 +39,7 @@ public static class DependencyInjection
         services.AddDbContext<InventoryDbContext>(options =>
             options.UseSqlite($"Data Source={storage.DatabasePath}"));
         services.AddScoped<IInventoryStore, EfInventoryStore>();
+        services.AddScoped<IRackStore, EfRackStore>();
         services.AddScoped<RemoteBackupRunner>();
         return services;
     }
@@ -48,7 +49,7 @@ public static class DependencyInjection
         await using var scope = host.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
         var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("Database");
-        await db.Database.EnsureCreatedAsync(cancellationToken).ConfigureAwait(false);
+        await EnsureSchema(db, cancellationToken).ConfigureAwait(false);
         if (!await db.ModuleTypes.AnyAsync(cancellationToken).ConfigureAwait(false))
         {
             var now = DateTime.UtcNow;
@@ -61,5 +62,11 @@ public static class DependencyInjection
             await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             logger.LogInformation("Modultypen-Seed geschrieben ({Count} Eintraege)", TypeRules.DefaultTypeNames.Count);
         }
+    }
+
+    public static async Task EnsureSchema(InventoryDbContext db, CancellationToken cancellationToken = default)
+    {
+        await db.Database.EnsureCreatedAsync(cancellationToken).ConfigureAwait(false);
+        await db.Database.ExecuteSqlRawAsync(InventoryDbContext.AdditiveSchemaSql, cancellationToken).ConfigureAwait(false);
     }
 }

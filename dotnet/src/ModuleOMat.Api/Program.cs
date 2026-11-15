@@ -70,6 +70,7 @@ app.UseSwaggerUI(options =>
 });
 
 app.MapInventoryApi();
+app.MapRackApi();
 app.MapSpaFallback(serveBuiltUi: !vueDev);
 
 app.Run();
