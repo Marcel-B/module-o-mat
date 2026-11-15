@@ -21,6 +21,12 @@ const items = ref([
     command: () => router.push("/types"),
   },
   {
+    label: "Rack-Planer",
+    icon: "pi pi-server",
+    id: "rack-planner-menu-item",
+    command: () => router.push("/racks"),
+  },
+  {
     separator: true,
   },
   {

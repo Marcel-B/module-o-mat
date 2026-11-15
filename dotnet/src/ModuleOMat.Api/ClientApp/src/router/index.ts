@@ -1,6 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import InventoryView from '@/views/InventoryView.vue'
 
+const RackListView = () => import('@/views/RackListView.vue')
+const RackPlannerView = () => import('@/views/RackPlannerView.vue')
+
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -52,6 +55,18 @@ const router = createRouter({
       name: 'backup-history',
       component: InventoryView,
       meta: { title: 'Sicherungshistorie' },
+    },
+    {
+      path: '/racks',
+      name: 'racks',
+      component: RackListView,
+      meta: { title: 'Rack-Planer' },
+    },
+    {
+      path: '/racks/:id',
+      name: 'rack',
+      component: RackPlannerView,
+      meta: { title: 'Rack planen' },
     },
   ],
 })

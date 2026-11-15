@@ -37,6 +37,16 @@ public interface IInventoryStore
     Task ReplaceInventory(BackupSnapshot snapshot, CancellationToken cancellationToken);
 }
 
+public interface IRackStore
+{
+    Task<IReadOnlyList<Rack>> ListRacks(CancellationToken cancellationToken);
+    Task<Rack?> GetRack(int id, CancellationToken cancellationToken);
+    Task<Rack> InsertRack(ValidatedRack rack, DateTime utcNow, CancellationToken cancellationToken);
+    Task<Rack> UpdateRack(int id, ValidatedRack rack, DateTime utcNow, CancellationToken cancellationToken);
+    Task DeleteRack(int id, CancellationToken cancellationToken);
+    Task<IReadOnlySet<int>> ActiveModuleIds(IReadOnlyList<int> moduleIds, CancellationToken cancellationToken);
+}
+
 public interface IManualStorage
 {
     string NewKey();

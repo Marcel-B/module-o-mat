@@ -43,6 +43,16 @@ public sealed class TwoPlaceNullableDecimalConverter : JsonConverter<decimal?>
     }
 }
 
+public sealed record RackDto(
+    int Id,
+    string Name,
+    int? PsuPlus12vMa,
+    int? PsuMinus12vMa,
+    int? PsuPlus5vMa,
+    IReadOnlyList<int> ModuleIds,
+    DateTime InsertedAt,
+    DateTime UpdatedAt);
+
 public sealed record YoutubeVideoDto(int Id, string Url, int Position);
 
 public sealed record PriceObservationDto(
@@ -118,6 +128,17 @@ public sealed record ErrorDto(
 
 public static class ApiJson
 {
+    public static RackDto Rack(Rack rack) =>
+        new(
+            rack.Id,
+            rack.Name,
+            rack.PsuPlus12VMa,
+            rack.PsuMinus12VMa,
+            rack.PsuPlus5VMa,
+            rack.ModuleIds,
+            rack.InsertedAt,
+            rack.UpdatedAt);
+
     public static ErrorDto Error(AppError error) => new(error.Message, error.Details);
 
     public static IResult ToHttp(AppError error) =>
