@@ -39,7 +39,7 @@ function submitImport() {
       <section id="backup-export-section">
         <h4 class="mb-1.5 font-semibold">Export</h4>
         <p class="mb-3 text-[0.92rem] text-surface-600">
-          Exportiert alle Module, Typen, YouTube-Videos und PDF-Anleitungen als ZIP-Datei.
+          Exportiert alle Module, Typen, YouTube-Videos, PDF-Anleitungen und Racks als ZIP-Datei.
           Soft-gelöschte Einträge sind nicht enthalten.
         </p>
         <Button

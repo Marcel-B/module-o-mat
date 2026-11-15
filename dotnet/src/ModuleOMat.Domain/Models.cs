@@ -116,11 +116,25 @@ public sealed record ValuationResult(
     IReadOnlyList<PriceObservation> Observations,
     PriceRange? PriceRange);
 
+/// <param name="Racks">null = Backup ohne Rack-Daten (aelteres Format); bestehende Racks bleiben beim Import erhalten.</param>
 public sealed record BackupSnapshot(
     IReadOnlyList<BackupTypeRow> Types,
     IReadOnlyList<BackupModuleRow> Modules,
     IReadOnlyList<BackupVideoRow> Videos,
-    IReadOnlyList<BackupObservationRow> Observations);
+    IReadOnlyList<BackupObservationRow> Observations,
+    IReadOnlyList<BackupRackRow>? Racks = null,
+    IReadOnlyList<BackupRackModuleRow>? RackModules = null);
+
+public sealed record BackupRackRow(
+    int Id,
+    string Name,
+    int? PsuPlus12VMa,
+    int? PsuMinus12VMa,
+    int? PsuPlus5VMa,
+    DateTime InsertedAt,
+    DateTime UpdatedAt);
+
+public sealed record BackupRackModuleRow(int Id, int RackId, int EurorackModuleId, int Position);
 
 public sealed record BackupTypeRow(int Id, string Name, DateTime InsertedAt, DateTime UpdatedAt);
 

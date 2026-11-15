@@ -339,6 +339,16 @@ public sealed class EfInventoryStore(InventoryDbContext db) : IInventoryStore
                 .OrderBy(o => o.Id)
                 .ToListAsync(cancellationToken)
                 .ConfigureAwait(false);
+        var racks = await db.Racks.AsNoTracking().OrderBy(r => r.Id).ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        var moduleIds = ids.ToHashSet();
+        var rackModules = (await db.RackModules.AsNoTracking()
+                .OrderBy(m => m.RackId)
+                .ThenBy(m => m.Position)
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false))
+            .Where(m => moduleIds.Contains(m.EurorackModuleId))
+            .ToArray();
 
         return new BackupSnapshot(
             types.Select(t => new BackupTypeRow(t.Id, t.Name, t.InsertedAt, t.UpdatedAt)).ToArray(),
@@ -353,6 +363,11 @@ public sealed class EfInventoryStore(InventoryDbContext db) : IInventoryStore
             observations.Select(o => new BackupObservationRow(
                     o.Id, o.EurorackModuleId, o.Amount, o.Currency, o.Source, o.SourceUrl, o.ObservedOn, o.Notes,
                     o.InsertedAt, o.UpdatedAt))
+                .ToArray(),
+            racks.Select(r => new BackupRackRow(
+                    r.Id, r.Name, r.PsuPlus12VMa, r.PsuMinus12VMa, r.PsuPlus5VMa, r.InsertedAt, r.UpdatedAt))
+                .ToArray(),
+            rackModules.Select(m => new BackupRackModuleRow(m.Id, m.RackId, m.EurorackModuleId, m.Position))
                 .ToArray());
     }
 
@@ -363,6 +378,28 @@ public sealed class EfInventoryStore(InventoryDbContext db) : IInventoryStore
         await db.YoutubeVideos.ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
         await db.EurorackModules.IgnoreQueryFilters().ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
         await db.ModuleTypes.ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
+        if (snapshot.Racks is not null)
+        {
+            await db.RackModules.ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
+            await db.Racks.ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
+            db.Racks.AddRange(snapshot.Racks.Select(r => new RackEntity
+            {
+                Id = r.Id,
+                Name = r.Name,
+                PsuPlus12VMa = r.PsuPlus12VMa,
+                PsuMinus12VMa = r.PsuMinus12VMa,
+                PsuPlus5VMa = r.PsuPlus5VMa,
+                InsertedAt = r.InsertedAt,
+                UpdatedAt = r.UpdatedAt
+            }));
+            db.RackModules.AddRange((snapshot.RackModules ?? []).Select(m => new RackModuleEntity
+            {
+                Id = m.Id,
+                RackId = m.RackId,
+                EurorackModuleId = m.EurorackModuleId,
+                Position = m.Position
+            }));
+        }
 
         db.ModuleTypes.AddRange(snapshot.Types.Select(t => new ModuleTypeEntity
         {
@@ -423,6 +460,11 @@ public sealed class EfInventoryStore(InventoryDbContext db) : IInventoryStore
         await ResetSequence("eurorack_modules", await MaxId(db.EurorackModules.IgnoreQueryFilters(), cancellationToken).ConfigureAwait(false), cancellationToken).ConfigureAwait(false);
         await ResetSequence("youtube_videos", await MaxId(db.YoutubeVideos, cancellationToken).ConfigureAwait(false), cancellationToken).ConfigureAwait(false);
         await ResetSequence("module_price_observations", await MaxId(db.PriceObservations, cancellationToken).ConfigureAwait(false), cancellationToken).ConfigureAwait(false);
+        if (snapshot.Racks is not null)
+        {
+            await ResetSequence("racks", await MaxId(db.Racks, cancellationToken).ConfigureAwait(false), cancellationToken).ConfigureAwait(false);
+            await ResetSequence("rack_modules", await MaxId(db.RackModules, cancellationToken).ConfigureAwait(false), cancellationToken).ConfigureAwait(false);
+        }
         await tx.CommitAsync(cancellationToken).ConfigureAwait(false);
     }
 
