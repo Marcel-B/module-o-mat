@@ -17,7 +17,7 @@ http://localhost:5012/ui.
 
 Datenübernahme aus einer anderen Instanz: ZIP unter `/api/v1/backup/export` exportieren und unter `/api/v1/backup/import` (oder `dotnet run --project src/ModuleOMat.Cli -- import datei.zip`) einspielen.
 
-Rack-Planer: unter http://localhost:5012/ui/racks lassen sich Racks mit Netzteil-Werten anlegen und Module einplanen (API `/api/v1/racks`). Die Verbrauchsrechnung passiert im Client. Racks sind nicht Teil des Backup-ZIPs; neue Tabellen werden beim Start automatisch in bestehenden Datenbanken angelegt.
+Rack-Planer: unter http://localhost:5012/ui/racks lassen sich Racks mit Netzteil-Werten anlegen und Module einplanen (API `/api/v1/racks`). Die Verbrauchsrechnung passiert im Client. Racks samt Netzteil und Modulzuordnung sind Teil des Backup-ZIPs (`racks.csv`, `rack_modules.csv`); ältere Backups ohne diese Dateien lassen sich weiter importieren und lassen vorhandene Racks unverändert. Neue Tabellen werden beim Start automatisch in bestehenden Datenbanken angelegt.
 
 ## Tests
 

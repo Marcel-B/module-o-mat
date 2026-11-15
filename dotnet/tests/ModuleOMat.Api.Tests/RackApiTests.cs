@@ -1,4 +1,6 @@
+using System.IO.Compression;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
@@ -122,5 +124,94 @@ public class RackApiTests : IDisposable
 
         var created = await _client.PostAsJsonAsync("/api/v1/racks", new { rack = new { name = "Nach Upgrade" } }, Json);
         Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+    }
+
+    private async Task<byte[]> ExportZip()
+    {
+        var exported = await _client.GetAsync("/api/v1/backup/export");
+        exported.EnsureSuccessStatusCode();
+        return await exported.Content.ReadAsByteArrayAsync();
+    }
+
+    private async Task ImportZip(byte[] zip)
+    {
+        using var content = new MultipartFormDataContent();
+        var file = new ByteArrayContent(zip);
+        file.Headers.ContentType = new MediaTypeHeaderValue("application/zip");
+        content.Add(file, "file", "inventory.zip");
+        var imported = await _client.PostAsync("/api/v1/backup/import", content);
+        Assert.Equal(HttpStatusCode.OK, imported.StatusCode);
+    }
+
+    private async Task<JsonElement[]> Racks() =>
+        (await _client.GetFromJsonAsync<JsonElement>("/api/v1/racks", Json)).GetProperty("racks").EnumerateArray().ToArray();
+
+    [Fact]
+    public async Task Backup_roundtrip_restores_racks_with_psu_and_modules()
+    {
+        var a = await CreateModule("A", 100);
+        var b = await CreateModule("B", 50);
+        var created = await _client.PostAsJsonAsync("/api/v1/racks", new
+        {
+            rack = new { name = "Case, \"gross\"", psu_plus12v_ma = 1500, psu_minus12v_ma = 900, module_ids = new[] { b, a } }
+        }, Json);
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+
+        var zip = await ExportZip();
+        using (var archive = new ZipArchive(new MemoryStream(zip)))
+        {
+            Assert.NotNull(archive.GetEntry("racks.csv"));
+            Assert.NotNull(archive.GetEntry("rack_modules.csv"));
+        }
+
+        foreach (var rack in await Racks())
+        {
+            (await _client.DeleteAsync($"/api/v1/racks/{rack.GetProperty("id").GetInt32()}")).EnsureSuccessStatusCode();
+        }
+
+        Assert.Empty(await Racks());
+
+        await ImportZip(zip);
+
+        var restored = Assert.Single(await Racks());
+        Assert.Equal("Case, \"gross\"", restored.GetProperty("name").GetString());
+        Assert.Equal(1500, restored.GetProperty("psu_plus12v_ma").GetInt32());
+        Assert.Equal(900, restored.GetProperty("psu_minus12v_ma").GetInt32());
+        Assert.Equal(JsonValueKind.Null, restored.GetProperty("psu_plus5v_ma").ValueKind);
+        Assert.Equal(new[] { b, a }, restored.GetProperty("module_ids").EnumerateArray().Select(x => x.GetInt32()).ToArray());
+
+        // Nach dem Import vergibt die Datenbank weiterhin freie IDs.
+        var next = await _client.PostAsJsonAsync("/api/v1/racks", new { rack = new { name = "Neu" } }, Json);
+        Assert.Equal(HttpStatusCode.Created, next.StatusCode);
+        Assert.Equal(2, (await Racks()).Length);
+    }
+
+    [Fact]
+    public async Task Importing_old_backup_without_racks_keeps_existing_racks()
+    {
+        var a = await CreateModule("A", 100);
+        var zip = await ExportZip();
+
+        byte[] oldZip;
+        using (var buffer = new MemoryStream())
+        {
+            buffer.Write(zip);
+            using (var archive = new ZipArchive(buffer, ZipArchiveMode.Update, leaveOpen: true))
+            {
+                archive.GetEntry("racks.csv")!.Delete();
+                archive.GetEntry("rack_modules.csv")!.Delete();
+            }
+
+            oldZip = buffer.ToArray();
+        }
+
+        var created = await _client.PostAsJsonAsync("/api/v1/racks", new { rack = new { name = "Bleibt", module_ids = new[] { a } } }, Json);
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+
+        await ImportZip(oldZip);
+
+        var rack = Assert.Single(await Racks());
+        Assert.Equal("Bleibt", rack.GetProperty("name").GetString());
+        Assert.Equal(new[] { a }, rack.GetProperty("module_ids").EnumerateArray().Select(x => x.GetInt32()).ToArray());
     }
 }

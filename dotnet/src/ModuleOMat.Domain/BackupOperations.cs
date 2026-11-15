@@ -36,6 +36,16 @@ public static class BackupOperations
                     BackupCsv.Dump(BackupCsv.ObservationHeaders, snapshot.Observations.Select(BackupCsv.ObservationRow)),
                     cancellationToken)
                 .ConfigureAwait(false);
+            await File.WriteAllTextAsync(
+                    Path.Combine(tmpRoot, BackupCsv.RacksFile),
+                    BackupCsv.Dump(BackupCsv.RackHeaders, (snapshot.Racks ?? []).Select(BackupCsv.RackRow)),
+                    cancellationToken)
+                .ConfigureAwait(false);
+            await File.WriteAllTextAsync(
+                    Path.Combine(tmpRoot, BackupCsv.RackModulesFile),
+                    BackupCsv.Dump(BackupCsv.RackModuleHeaders, (snapshot.RackModules ?? []).Select(BackupCsv.RackModuleRow)),
+                    cancellationToken)
+                .ConfigureAwait(false);
 
             var manualsDir = Path.Combine(tmpRoot, BackupCsv.ManualsDir);
             Directory.CreateDirectory(manualsDir);
@@ -110,7 +120,32 @@ public static class BackupOperations
                         .ToArray()
                     : [];
 
-                var snapshot = new BackupSnapshot(types, modules, videos, observations);
+                // Aeltere Backups enthalten keine Racks: dann bleiben die vorhandenen Racks unangetastet.
+                var racksPath = Path.Combine(contentRoot, BackupCsv.RacksFile);
+                BackupRackRow[]? racks = null;
+                BackupRackModuleRow[]? rackModules = null;
+                if (File.Exists(racksPath))
+                {
+                    racks = BackupCsv.Parse(
+                            await File.ReadAllTextAsync(racksPath, cancellationToken).ConfigureAwait(false),
+                            BackupCsv.RackHeaders,
+                            BackupCsv.RacksFile)
+                        .Select(BackupCsv.ToRack)
+                        .ToArray();
+                    var rackModulesPath = Path.Combine(contentRoot, BackupCsv.RackModulesFile);
+                    var rackIds = racks.Select(r => r.Id).ToHashSet();
+                    rackModules = File.Exists(rackModulesPath)
+                        ? BackupCsv.Parse(
+                                await File.ReadAllTextAsync(rackModulesPath, cancellationToken).ConfigureAwait(false),
+                                BackupCsv.RackModuleHeaders,
+                                BackupCsv.RackModulesFile)
+                            .Select(BackupCsv.ToRackModule)
+                            .Where(m => rackIds.Contains(m.RackId))
+                            .ToArray()
+                        : [];
+                }
+
+                var snapshot = new BackupSnapshot(types, modules, videos, observations, racks, rackModules);
                 await store.ReplaceInventory(snapshot, cancellationToken).ConfigureAwait(false);
 
                 var manualsSource = Path.Combine(contentRoot, BackupCsv.ManualsDir);

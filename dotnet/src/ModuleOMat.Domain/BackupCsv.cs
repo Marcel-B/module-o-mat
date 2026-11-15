@@ -9,6 +9,8 @@ public static class BackupCsv
     public const string ModulesFile = "eurorack_modules.csv";
     public const string VideosFile = "youtube_videos.csv";
     public const string ObservationsFile = "module_price_observations.csv";
+    public const string RacksFile = "racks.csv";
+    public const string RackModulesFile = "rack_modules.csv";
     public const string ManualsDir = "manuals";
 
     public static readonly string[] ModuleTypeHeaders = ["id", "name", "inserted_at", "updated_at"];
@@ -30,6 +32,11 @@ public static class BackupCsv
         "id", "eurorack_module_id", "amount", "currency", "source", "source_url", "observed_on", "notes",
         "inserted_at", "updated_at"
     ];
+
+    public static readonly string[] RackHeaders =
+        ["id", "name", "psu_plus12v_ma", "psu_minus12v_ma", "psu_plus5v_ma", "inserted_at", "updated_at"];
+
+    public static readonly string[] RackModuleHeaders = ["id", "rack_id", "eurorack_module_id", "position"];
 
     public static string Dump(IReadOnlyList<string> headers, IEnumerable<IReadOnlyList<string>> rows)
     {
@@ -266,6 +273,32 @@ public static class BackupCsv
         Cell(row.Source), Cell(row.SourceUrl), Cell(row.ObservedOn), Cell(row.Notes),
         Cell(row.InsertedAt), Cell(row.UpdatedAt)
     ];
+
+    public static BackupRackRow ToRack(IReadOnlyDictionary<string, string> row) =>
+        new(
+            RequiredInt(row, "id"),
+            RequiredString(row, "name"),
+            OptionalInt(row.GetValueOrDefault("psu_plus12v_ma")),
+            OptionalInt(row.GetValueOrDefault("psu_minus12v_ma")),
+            OptionalInt(row.GetValueOrDefault("psu_plus5v_ma")),
+            RequiredDateTime(row, "inserted_at"),
+            RequiredDateTime(row, "updated_at"));
+
+    public static BackupRackModuleRow ToRackModule(IReadOnlyDictionary<string, string> row) =>
+        new(
+            RequiredInt(row, "id"),
+            RequiredInt(row, "rack_id"),
+            RequiredInt(row, "eurorack_module_id"),
+            RequiredInt(row, "position"));
+
+    public static string[] RackRow(BackupRackRow row) =>
+    [
+        Cell(row.Id), Cell(row.Name), Cell(row.PsuPlus12VMa), Cell(row.PsuMinus12VMa), Cell(row.PsuPlus5VMa),
+        Cell(row.InsertedAt), Cell(row.UpdatedAt)
+    ];
+
+    public static string[] RackModuleRow(BackupRackModuleRow row) =>
+        [Cell(row.Id), Cell(row.RackId), Cell(row.EurorackModuleId), Cell(row.Position)];
 
     private static void WriteRow(StringBuilder builder, IReadOnlyList<string> cells)
     {

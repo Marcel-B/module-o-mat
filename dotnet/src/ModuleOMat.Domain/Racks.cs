@@ -181,22 +181,7 @@ public static class RackOperations
         return validated;
     }
 
-    // Racks sind nicht Teil der Datensicherung, deshalb wird nach Aenderungen kein Backup angestossen.
-    private static async Task<Result<T>> WithWrite<T>(IMaintenanceGate gate, Func<Task<Result<T>>> action)
-    {
-        var begin = gate.BeginWrite();
-        if (begin.IsError)
-        {
-            return Result.Fail<T>(begin.Error);
-        }
-
-        try
-        {
-            return await action().ConfigureAwait(false);
-        }
-        finally
-        {
-            gate.EndWrite();
-        }
-    }
+    // Rack-Aenderungen stossen wie Modul-Aenderungen die Datensicherung an.
+    private static Task<Result<T>> WithWrite<T>(IMaintenanceGate gate, Func<Task<Result<T>>> action) =>
+        InventoryOperations.WithWrite(gate, action);
 }

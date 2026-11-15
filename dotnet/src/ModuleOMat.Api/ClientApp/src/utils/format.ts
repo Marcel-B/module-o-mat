@@ -65,6 +65,14 @@ export function formatHpWidth(stats: InventoryStats | null | undefined): string 
   return `${cm} cm / ${meters} m`
 }
 
+export const HP_MM = 5.08
+
+/** Breite einer HP-Summe in cm, z. B. 165 HP → "83,8 cm". */
+export function formatHpCm(hp: number): string {
+  const cm = (hp * HP_MM) / 10
+  return `${cm.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} cm`
+}
+
 export function formatBytes(bytes: number | null | undefined): string {
   if (!Number.isFinite(bytes)) return ''
   if ((bytes as number) < 1024) return `${bytes} B`
